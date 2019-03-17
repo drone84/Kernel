@@ -1,4 +1,4 @@
-;Super IO Registers
+;Super IO Runtimee Registers
 PME_STS_REG     = $AF1100
 PME_EN_REG		  = $AF1102
 PME_STS1_REG		= $AF1104
