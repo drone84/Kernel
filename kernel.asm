@@ -13,10 +13,10 @@
 .include "SID_def.asm"        ; SID, but not the latest - Deprecated for now.
 .include "RTC_def.asm"        ; Real-Time Clock Register Definition (BQ4802)
 .include "io_def.asm"         ; Joystick, DipSwitch, CODEC, SDCard Controller Registers
+.include "CMD_Parser.asm"
 .include "monitor.asm"        ; Tom's early code for the Monitor (Possibly useful for PJW)
 .include "SDOS.asm"           ; Code Library for SD Card Controller (Working, needs a lot improvement and completion)
 .include "OPL2_Library.asm"   ; Library code to drive the OPL2 (right now, only in mono (both side from the same data))
-.include "BM437_ATI_FontSet.asm" ; This is the Official (I modified 2 Chars for the Foenix Logo) PC 8x8 Char Set from the ATI BIOS
 ; C256 Foenix Kernel
 ; The Kernel is located in flash @ F8:0000 but not accessible by CPU
 ; Kernel Transfered by GAVIN @ Cold Reset to $18:0000 - $1F:FFFF
@@ -67,13 +67,13 @@ CLEAR_MEM_LOOP
                 setas
                 LDA #`SCREEN_PAGE0
                 STA CURSORPOS+2
-
                 LDA #$00
                 STA KEYBOARD_SC_FLG     ; Clear the Keyboard Flag
 
                 ; Set screen dimensions. There more columns in memory than
                 ; are visible. A virtual line is 128 bytes, but 80 columns will be
                 ; visible on screen.
+                setaxl
                 LDX #72
                 STX COLS_VISIBLE
                 LDY #56
@@ -83,7 +83,7 @@ CLEAR_MEM_LOOP
                 LDY #64
                 STY LINES_MAX
 
-                setaxl
+
                 ; Init CODEC
                 JSL INITCODEC
                 ; Init Suprt IO (Keyboard/Floppy/Etc...)
@@ -113,23 +113,39 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 LDX #<>greet_msg
                 JSL IPRINT       ; print the first line
                  ; Let's Change the Color Memory For the Logo
-                LDX #<>version_msg
+                ;LDX #<>version_msg
+                LDX #<>old_pc_style_stat
                 JSL IPRINT       ; print the first line
+
                 setdp 0
                 ; Init the Keyboard
                 JSL INITKEYBOARD ;
                 ; Print the legendary "Ready." on screen with Cursor below
                 setaxl
+
+                JSL OPL2_TONE_TEST
                 LDX #<>ready_msg
                 JSL IPRINT       ; print the first line
 
                 CLI ; Make sure no Interrupt will come and fuck up Init before this point.
 
                 setas
-                setdbr $01      ;set data bank to 1 (Kernel Variables)
+                setdbr `greet_msg      ;set data bank to 19 (Kernel Variables)
 
 endlessloop     NOP
+                LDA KEY_BUFFER_CMD
+                CMP #$01
+                BEQ GoProcessCommandLine
+
                 JML endlessloop
+GoProcessCommandLine
+                LDA #$00  ; Clear the Flag
+                STA KEY_BUFFER_CMD
+                JSL PROCESS_COMMAND_LINE
+                LDX #<>ready_msg
+                JSL IPRINT                
+                BRA  endlessloop
+
 
 greet_done      BRK             ;Terminate boot routine and go to Ready handler.
 
@@ -204,39 +220,39 @@ IGETCHE         JSL IGETCHW
 ; A: Character read
 ; Carry: 1 if no valid data
 ;
-IGETCHW         PHD
-                PHX
-                PHP
-                setdp $0F00
-                setaxl
+IGETCHW         ;PHD
+                ;PHX
+                ;PHP
+                ;setdp $0F00
+                ;setaxl
                 ; Read from the keyboard buffer
                 ; If the read position and write position are the same
                 ; no data is waiting.
-igetchw1        LDX KEY_BUFFER_RPOS
-                CPX KEY_BUFFER_WPOS
+;igetchw1        LDX KEY_BUFFER_RPOS
+                ;;CPX KEY_BUFFER_WPOS
                 ; If data is waiting. return it.
-                ; Otherwise wait for data.
-                BNE igetchw2
-                ;SEC            ; In non-waiting version, set the Carry bit and return
-                ;BRA igetchw_done
-                ; Simulator should wait for input
-                SIM_WAIT
-                JMP igetchw1
-igetchw2        LDA $0,D,X  ; Read the value in the keyboard buffer
-                PHA
+                ;; Otherwise wait for data.
+                ;BNE igetchw2
+                ;;SEC            ; In non-waiting version, set the Carry bit and return
+                ;;BRA igetchw_done
+                ;; Simulator should wait for input
+                ;SIM_WAIT
+;                JMP igetchw1
+;igetchw2        LDA $0,D,X  ; Read the value in the keyboard buffer
+                ;PHA
                 ; increment the read position and wrap it when it reaches the end of the buffer
-                TXA
-                CLC
-                ADC #$02
-                CMP #KEY_BUFFER_SIZE
-                BCC igetchw3
-                LDA #$0
-igetchw3        STA KEY_BUFFER_RPOS
-                PLA
-
-igetchw_done    PLP
-                PLX             ; Restore the saved registers and return
-                PLD
+                ;TXA
+                ;CLC
+                ;ADC #$02
+                ;CMP #KEY_BUFFER_SIZE
+                ;BCC igetchw3
+                ;LDA #$0
+;igetchw3        STA KEY_BUFFER_RPOS
+                ;PLA
+;
+;igetchw_done    PLP
+                ;PLX             ; Restore the saved registers and return
+;                PLD
                 RTL
 ;
 ; IPRINT
@@ -313,7 +329,7 @@ IPUTB
 ; Prints a carriage return.
 ; This moves the cursor to the beginning of the next line of text on the screen
 ; Modifies: Flags
-IPRINTCR	PHX
+IPRINTCR	      PHX
                 PHY
                 PHP
                 LDX #0
@@ -371,9 +387,65 @@ icsr_nowrap     STX CURSORX
                 PLX
                 RTL
 
-ISRLEFT	        RTL
-ICSRUP	        RTL
-ICSRDOWN	      RTL
+;ISRLEFT
+;Move the cursor left one space
+; Modifies: none
+;
+ISRLEFT
+                PHX
+                PHY
+                PHB
+                PHA
+                setaxl
+                setdp $0
+                LDA CURSORX
+                BEQ isrleft_done_already_zero ; Check that we are not already @ Zero
+                LDX CURSORX
+                DEX
+                STX CURSORX
+                LDY CURSORY
+                JSL ILOCATE
+isrleft_done_already_zero
+                PLA
+                PLB
+                PLY
+                PLX
+                RTL
+
+;ICSRUP
+;Move the cursor up one space
+; This routine doesn't wrap the cursor when it reaches the top, it just stays at the top
+; Modifies: none
+;
+ICSRUP
+                PHX
+                PHY
+                PHB
+                PHA
+                setaxl
+                setdp $0
+                LDA CURSORY
+                BEQ isrup_done_already_zero ; Check if we are not already @ Zero
+                LDY CURSORY
+                DEY
+                STY CURSORY
+                LDX CURSORX
+                JSL ILOCATE
+isrup_done_already_zero
+                PLA
+                PLB
+                PLY
+                PLX
+                RTL
+
+;ICSRUP
+;Move the cursor down one space
+; When it reaches the bottom. Every time it go over the limit, the screen is scrolled up. (Text + Color)
+; It will replicate the Color of the last line before it is scrolled up.
+; Modifies: none
+;
+ICSRDOWN
+                RTL
 
 ;ILOCATE
 ;Sets the cursor X and Y positions to the X and Y registers
@@ -872,7 +944,7 @@ initFontsetbranch0
                 NOP
                 LDX #$0000
 initFontsetbranch1
-                LDA @lBM437_ATI_8X8_Font_Set,X
+                LDA @lFONT_4_BANK1,X
                 STA @lFONT_MEMORY_BANK1,X ; Vicky FONT RAM Bank
                 INX
                 CPX #$0800
@@ -892,7 +964,7 @@ initFontsetbranch1
 ;  Vicky's Internal Cursor's Registers
 IINITCURSOR     PHA
                 setas
-                LDA #$A0      ;The Cursor Character will be a Fully Filled Block
+                LDA #$B1      ;The Cursor Character will be a Fully Filled Block
                 STA VKY_TXT_CURSOR_CHAR_REG
                 LDA #$03      ;Set Cursor Enable And Flash Rate @1Hz
                 STA VKY_TXT_CURSOR_CTRL_REG ;
@@ -1050,8 +1122,8 @@ IINITKEYBOARD	  PHD
 
                 BRL initkb_loop_out
 
-passAAtest      ;LDX #<>pass_tst0xAAmsg
-                ;JSL IPRINT      ; print Message
+passAAtest      LDX #<>pass_tst0xAAmsg
+                JSL IPRINT      ; print Message
 ;; Test AB
 				        LDA #$AB			;Send test Interface command
 				        STA KBD_CMD_BUF
@@ -1064,8 +1136,8 @@ passAAtest      ;LDX #<>pass_tst0xAAmsg
 
                 BRL initkb_loop_out
 
-passABtest      ;LDX #<>pass_tst0xABmsg
-                ;JSL IPRINT       ; print Message
+passABtest      LDX #<>pass_tst0xABmsg
+                JSL IPRINT       ; print Message
 ;; Program the Keyboard & Enable Interrupt with Cmd 0x60
                 LDA #$60            ; Send Command 0x60 so to Enable Interrupt
                 STA KBD_CMD_BUF
@@ -1076,41 +1148,58 @@ passABtest      ;LDX #<>pass_tst0xABmsg
                 STA KBD_DATA_BUF
 
                 JSR Poll_Inbuf ;
-
-                ;LDX #<>pass_cmd0x60msg
-                ;JSL IPRINT       ; print Message
+;
+                LDX #<>pass_cmd0x60msg
+                JSL IPRINT       ; print Message
 ;; Reset Keyboard
-;                LDA #$FF      ; Send Keyboard Reset command
-;                STA KBD_DATA_BUF
+                LDA #$FF      ; Send Keyboard Reset command
+                STA KBD_DATA_BUF
                 ; Must wait here;
-;                LDX #$FFFF
-;DLY_LOOP1       DEX
-;                CPX #$0000
-;                BNE DLY_LOOP1
+                LDX #$FFFF
+DLY_LOOP1       DEX
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                CPX #$0000
+                BNE DLY_LOOP1
 
-;                JSR Poll_Outbuf ;
+                JSR Poll_Outbuf ;
 
-;                LDA KBD_OUT_BUF   ; Read Output Buffer
+                LDA KBD_OUT_BUF   ; Read Output Buffer
 
-;                LDX #<>pass_cmd0xFFmsg
-;                JSL IPRINT       ; print Message
+                LDX #<>pass_cmd0xFFmsg
+                JSL IPRINT       ; print Message
+;
 ;; Test Echo - Cmd$EE
                 LDA #$EE      ; Send Keyboard Reset command
                 STA KBD_DATA_BUF
 
                 LDX #$4000
 DLY_LOOP2       DEX
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
                 CPX #$0000
                 BNE DLY_LOOP2
 
                 JSR Poll_Outbuf ;
 
-                LDA KBD_OUT_BUF
-                CMP #$EE
-                BNE initkb_loop_out
+                ;LDA KBD_OUT_BUF
+                ;CMP #$EE
+                ;BNE initkb_loop_out
 
-                ;LDX #<>pass_cmd0xEEmsg
-                ;JSL IPRINT       ; print Message
+                LDX #<>pass_cmd0xEEmsg
+                JSL IPRINT       ; print Message
 
 				        LDA #$F4			; Enable the Keyboard
 				        STA KBD_DATA_BUF
@@ -1126,8 +1215,6 @@ DLY_LOOP2       DEX
                 LDA @lINT_MASK_REG1
                 AND #~FNX1_INT00_KBD
                 STA @lINT_MASK_REG1
-
-
 
                 LDX #<>Success_kb_init
                 SEC
@@ -1696,7 +1783,9 @@ IRQ_HANDLER_FETCH
 
                 ; Check for CTRL Press or Unpressed
                 CMP #$1D                ; Left CTRL pressed
-                BEQ KB_SET_CTRL
+                BNE NOT_KB_SET_CTRL
+                BRL KB_SET_CTRL
+NOT_KB_SET_CTRL
                 CMP #$9D                ; Left CTRL Unpressed
                 BNE KB_CHECK_ALT
                 BRL KB_CLR_CTRL
@@ -1741,7 +1830,11 @@ ALT_KEY_ON      LDA @lScanCode_Alt_Set1, x
 
                 ; Write Character to Screen (Later in the buffer)
 KB_WR_2_SCREEN
+                PHA
                 setxl
+                JSL SAVECHAR2CMDLINE
+
+                PLA
                 JSL PUTC
                 JMP KB_CHECK_B_DONE
 
@@ -1830,11 +1923,25 @@ ISCRGETWORD     BRK ; Read a current word on the screen. A word ends with a spac
 ; Greeting message and other kernel boot data
 ;
 KERNEL_DATA
-greet_msg       .text $20, $20, $20, $20, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, "C256 FOENIX DEVELOPMENT SYSTEM",$0D
-                .text $20, $20, $20, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $20, "Software Development Team: TBD",$0D
-                .text $20, $20, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $20, $20, "Hardware platform Created by: Stefany Allaire",$0D
-                .text $20, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $20, $20, $20, "www.c256foenix.com",$0D
-                .text $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $EC, $A9, $20, $20, $20, $20, "2048KB CODE RAM  4096K VIDEO MEM",$00
+greet_msg       .text $20, $20, $20, $20, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, "C256 FOENIX DEVELOPMENT SYSTEM",$0D
+                .text $20, $20, $20, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $20, "May the Power of the 65C816 Bring You Joy!",$0D
+                .text $20, $20, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $20, $20, "System Designed by: Stefany Allaire",$0D
+                .text $20, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $20, $20, $20, "www.c256foenix.com",$0D
+                .text $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $0B, $0C, $20, $20, $20, $20, "2048KB CODE RAM  4096K VIDEO MEM",$0D, $00
+
+old_pc_style_stat
+                .text $D6, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C2
+                .text      $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $B7, $0D
+                .text $BA, " Main Processor     : 65C816      ",$B3," Base Memory Size     : 2048K     ",$BA, $0D
+                .text $BA, " Numeric Processor  : CFP9518     ",$B3," Video Memory Size    : 4096K     ",$BA, $0D
+                .text $BA, " Floppy Driver A:   : Yes         ",$B3," Hard Disk C: Type    : None      ",$BA, $0D
+                .text $BA, " SDCard Card Reader : Yes         ",$B3," Serial Port(s)       : $AF:13F8, ",$BA, $0D
+                .text $BA, " Display Type       : VGA         ",$B3,"                        $AF:12F8  ",$BA, $0D
+                .text $BA, " Foenix Kernel Date : 042219      ",$B3," Parallel Ports(s)    : $AF:1378  ",$BA, $0D
+                .text $BA, " Keyboard Type      : PS2         ",$B3," Sound Chip Installed : OPL2(2)   ",$BA, $0D
+                .text $D3, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C1
+                .text      $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $C4, $BD, $00
+
 
 greet_clr_line1 .text $1D, $1D, $1D, $1D, $1D, $1D, $8D, $8D, $4D, $4D, $2D, $2D, $5D, $5D
 greet_clr_line2 .text $1D, $1D, $1D, $1D, $1D, $8D, $8D, $4D, $4D, $2D, $2D, $5D, $5D, $5D
@@ -2000,4 +2107,6 @@ RANDOM_LUT_Tbl		    .text  $1d, $c8, $a7, $ac, $10, $d6, $52, $7c, $83, $dd, $ce
 				              .text  $8f, $0c, $20, $00, $91, $b6, $45, $9e, $3e, $3d, $66, $7e, $0a, $1c, $6b, $74
 * = $1FF000
 FONT_4_BANK0
+.binary "FONT/Bm437 PhoenixEGA 8x8.bin", 0, 2048
+FONT_4_BANK1
 .binary "FONT/CBM-ASCII_8x8.bin", 0, 2048
