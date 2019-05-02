@@ -2107,6 +2107,6 @@ RANDOM_LUT_Tbl		    .text  $1d, $c8, $a7, $ac, $10, $d6, $52, $7c, $83, $dd, $ce
 				              .text  $8f, $0c, $20, $00, $91, $b6, $45, $9e, $3e, $3d, $66, $7e, $0a, $1c, $6b, $74
 * = $1FF000
 FONT_4_BANK0
-.binary "FONT/Bm437 PhoenixEGA 8x8.bin", 0, 2048
+.binary "FONT/Bm437_PhoenixEGA_8x8.bin", 0, 2048
 FONT_4_BANK1
 .binary "FONT/CBM-ASCII_8x8.bin", 0, 2048
