@@ -17,6 +17,8 @@
 .include "monitor.asm"        ; Tom's early code for the Monitor (Possibly useful for PJW)
 .include "SDOS.asm"           ; Code Library for SD Card Controller (Working, needs a lot improvement and completion)
 .include "OPL2_Library.asm"   ; Library code to drive the OPL2 (right now, only in mono (both side from the same data))
+.include "Floppy.asm"
+.include "FAT12.asm"
 ; C256 Foenix Kernel
 ; The Kernel is located in flash @ F8:0000 but not accessible by CPU
 ; Kernel Transfered by GAVIN @ Cold Reset to $18:0000 - $1F:FFFF
@@ -127,11 +129,83 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 LDX #<>ready_msg
                 JSL IPRINT       ; print the first line
 
+
+                ;---------------------------------------------------------------
+                ; FAT 12 test code START
+                setaxl
+                LDA #`file_to_load ; load the byte nb 3 (bank byte)
+                PHA
+                LDA #<>file_to_load ; load the low world part of the buffer address
+                PHA
+                LDA #`FAT12_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
+                PHA
+                LDA #<>FAT12_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
+                PHA
+                ;JSL ILOAD_FILE
+                JSL IFAT12_READ_BOOT_SECTOR
+
+
+                CMP #$0001
+                BEQ FAT_12_BOOT_SECTOR_PARSING_OK
+                LDX #<>error_FAT
+                JSL IPRINT       ; print the first line
+
+FAT_12_BOOT_SECTOR_PARSING_OK
+                ;LDX #<>text_BOOT_SECTOR_PARSING_OK
+                ;JSL IPRINT       ; print the first line
+                JSL IFAT12_GET_ROOT_DIR_POS
+                setaxl
+                LDA #$00 ; sellect the first entry
+                PHA
+FDD_DISPLAY_NEXT_ROOT_ENTRY
+                JSL IFAT12_GET_ROOT_ENTRY
+                setdbr `Root_entry_value
+                LDX #<>Root_entry_value
+                JSL IPRINT       ; print the first line
+                setaxl
+                PLA
+                CMP #20 ;Max_Root_Entry ; limit jusy how many enty is displayed
+                BEQ FDD_END_DISPLAY_ROOT_ENTRY_LOOP
+                INC A
+                PHA
+
+                BRA FDD_DISPLAY_NEXT_ROOT_ENTRY
+FDD_END_DISPLAY_ROOT_ENTRY_LOOP
+                PLA
+                LDA #0 ; read fthe first root entry
+                JSL IFAT12_GET_ROOT_ENTRY
+                BRA FIRST_ROOT_ENTRY_READ
+READ_NEXT_FILE
+
+FIRST_ROOT_ENTRY_READ
+                LDA Root_entry_value + 26 ; get the first fat entry for the fil from the root directory entry 0
+                ;ADC #1+9+9+14 ; skip the reserved sector ,  the 2 fat and the root sector
+                STA Fat12_next_entry
+
+Read_next_sector; read sector function to call there
+                LDA #`FAT12_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
+                PHA
+                LDA #<>FAT12_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
+                PHA
+                LDA Fat12_next_entry ; sector to read
+                ADC #1+9+9+14
+                JSL IFDD_READ
+                PLX
+                PLX
+                LDA Fat12_next_entry ; sector to read
+                JSL IFAT_GET_FAT_ENTRY
+                LDA Fat12_next_entry
+                CMP #$FFE
+                BCS READ_NEXT_FILE
+                BRA Read_next_sector
+end_loop        BRA end_loop
+
+                ; FAT 12 test code END
+                ;---------------------------------------------------------------
                 CLI ; Make sure no Interrupt will come and fuck up Init before this point.
 
                 setas
                 setdbr `greet_msg      ;set data bank to 19 (Kernel Variables)
-
 endlessloop     NOP
                 LDA KEY_BUFFER_CMD
                 CMP #$01
@@ -143,7 +217,7 @@ GoProcessCommandLine
                 STA KEY_BUFFER_CMD
                 JSL PROCESS_COMMAND_LINE
                 LDX #<>ready_msg
-                JSL IPRINT                
+                JSL IPRINT
                 BRA  endlessloop
 
 
@@ -2007,6 +2081,8 @@ hello_ml        .null "G 020000",$0D
 
 error_01        .null "ABORT ERROR"
 hex_digits      .text "0123456789ABCDEF",0
+error_FAT       .null "Error in the floppy boot sector, wrong data",$0D
+file_to_load    .text "MSDOS   SYS"
 .align 256
 ;                           $00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F
 ScanCode_Press_Set1   .text $00, $1B, $31, $32, $33, $34, $35, $36, $37, $38, $39, $30, $2D, $3D, $08, $09    ; $00
