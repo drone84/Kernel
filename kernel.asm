@@ -19,6 +19,7 @@
 .include "OPL2_Library.asm"   ; Library code to drive the OPL2 (right now, only in mono (both side from the same data))
 .include "Floppy.asm"
 .include "FAT12.asm"
+.include "uart.s"
 ; C256 Foenix Kernel
 ; The Kernel is located in flash @ F8:0000 but not accessible by CPU
 ; Kernel Transfered by GAVIN @ Cold Reset to $18:0000 - $1F:FFFF
@@ -129,7 +130,14 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 LDX #<>ready_msg
                 JSL IPRINT       ; print the first line
 
-
+                setal
+                LDA #1              ; Select COM1
+                JSL UART_SELECT
+                JSL UART_INIT       ; And initialize it
+                LDX #<>ready_msg
+                JSL UART_PUTS
+                ;LDX #<>ready_msg
+                ;JSL UART_PUTS
                 ;---------------------------------------------------------------
                 ; FAT 12 test code START
                 setaxl
