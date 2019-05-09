@@ -127,8 +127,6 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 setaxl
 
                 JSL OPL2_TONE_TEST
-                LDX #<>ready_msg
-                JSL IPRINT       ; print the first line
 
                 setal
                 LDA #1              ; Select COM1
@@ -136,8 +134,54 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 JSL UART_INIT       ; And initialize it
                 LDX #<>ready_msg
                 JSL UART_PUTS
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
                 ;LDX #<>ready_msg
                 ;JSL UART_PUTS
+
+                ;---------------------------------------------------------------
+                ; Floppy test code START
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                setaxl
+                JSL IFDD_INIT_AT
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                setas
+                LDA #0              ; Sellect the floppy disc drive 0
+                JSL IFDD_RECALIBRATE
+                setaxl
+                LDX #500
+                JSL ILOOP_MS
+seek_loop       setas
+                LDA #0
+                LDX #30
+                JSL IFDD_SEEK
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                setaxl
+                LDX #500
+                JSL ILOOP_MS
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                setaxl
+                LDX #500
+                JSL ILOOP_MS
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                setas
+                LDA #0
+                LDX #15
+                JSL IFDD_SEEK
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                setaxl
+                LDX #500
+                JSL ILOOP_MS
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                setaxl
+                LDX #500
+                JSL ILOOP_MS
+                JSL IFDD_PRINT_REG  ; read the FDD register value
+                BRA seek_loop
+                ;---------------
+
                 ;---------------------------------------------------------------
                 ; FAT 12 test code START
                 setaxl
@@ -2091,6 +2135,7 @@ error_01        .null "ABORT ERROR"
 hex_digits      .text "0123456789ABCDEF",0
 error_FAT       .null "Error in the floppy boot sector, wrong data",$0D
 file_to_load    .text "MSDOS   SYS"
+
 .align 256
 ;                           $00, $01, $02, $03, $04, $05, $06, $07, $08, $09, $0A, $0B, $0C, $0D, $0E, $0F
 ScanCode_Press_Set1   .text $00, $1B, $31, $32, $33, $34, $35, $36, $37, $38, $39, $30, $2D, $3D, $08, $09    ; $00

@@ -318,3 +318,30 @@ put_loop    LDA #0,B,X
 done        PLP
             RTL
             .pend
+
+;
+; Send a byte converted in tow string hex to the UART
+;
+; Inputs:
+;   A = the character to print
+;   X = the port to use
+;
+UART_PUTHEX   .proc
+            PHA               ; save the value before converting the High part into ASCII
+            LSR A             ; Extracting the high part of the byte
+            LSR A
+            LSR A
+            LSR A
+            AND #$F
+            LDX A
+            LDA hex_digits,x
+            LDX #0
+            JSL UART_PUTC
+            PLA             ; get the original value out of the stack
+            AND #$F         ; Extracting the low part of the byte
+            LDX A
+            LDA hex_digits,x
+            LDX #0
+            JSL UART_PUTC
+            RTL
+            .pend

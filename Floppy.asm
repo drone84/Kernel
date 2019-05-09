@@ -3,6 +3,39 @@
 
 FLOPPY_CMD_BUFFER = $1A000 ; 10 Byte buffer for the command to be send to the FDC and the the data recieved as e result of the command
 * = $1A00A
+ILOOP           NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                NOP
+                RTL
+
+ILOOP_1         JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                JSL ILOOP
+                RTL
+
+ILOOP_1MS       JSL ILOOP_1
+                RTL
+
+ILOOP_MS        CPX #0
+                BEQ LOOP_MS_END
+                JSL ILOOP_1MS
+                DEX
+                BRA ILOOP_MS
+LOOP_MS_END     RTL
 ;-------------------------------------------------------------------------------
 ;
 ; setaxl
@@ -16,30 +49,30 @@ FLOPPY_CMD_BUFFER = $1A000 ; 10 Byte buffer for the command to be send to the FD
 ;
 ;-------------------------------------------------------------------------------
 
-IFDD_INIT_AT    JSL IFDD_RESET_FULL         ; Reset FDD : No DMA, Drive 0 selected, no motor activated
+IFDD_INIT_AT    setaxl
+                JSL IFDD_RESET_FULL         ; Reset FDD : No DMA, Drive 0 selected, no motor activated
+                setdbr `FDD_CONFIG_CTRL  ; Set Data Bank Register
+                LDA #$02
+                TSB FDD_CONFIG_CTRL
+                setdbr `FDD_DATA_RATE_SELECT  ; Set Data Bank Register
+                LDA #$00
+                TSB FDD_DATA_RATE_SELECT
                 setdbr `FDD_DIGITAL_OUTPUT  ; Set Data Bank Register
-                LDA #1
+                LDA #$F0
                 TSB FDD_DIGITAL_OUTPUT      ; Set the reset bit to exit the reset mode  "Test and Reset Memory Bits Against Accumulator"
-                BRK
+                RTL
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 IFDD_RESET      setdbr `FDD_DIGITAL_OUTPUT  ; Set Data Bank Register
                 LDA #FDD_nRESET             ; reset the floppy disc controler, deactive all the motors and the DMA
                 TRB FDD_DIGITAL_OUTPUT      ; Clear the reset bit to go in reset mode "Test and Reset Memory Bits Against Accumulator"
-                NOP                         ; wait until the rest is done, the doc say 100ns min
-                NOP
-                NOP
-                NOP
-                NOP
-                NOP
-                NOP
-                NOP
+                JSL ILOOP_1
                 ; reset the DATA_RATE_SELECT register : automatic low Power, Pres Comp => Default See tab 10 in FDC doc, Data Rate to 250 Kbps
                 setdbr `FDD_DATA_RATE_SELECT
                 LDA #2
-                STA FDD_DATA_RATE_SELECT
-                ; if in mode PC/AT or PS/2 the datarate is set in Config Control Register
+                STA FDD_DATA_RATE_SELECT    ; if in mode PC/AT or PS/2 the datarate is set in Config Control Register
+                JSL ILOOP_1MS
                 setdbr `FDD_CONFIG_CTRL
                 LDA #2
                 STA FDD_CONFIG_CTRL
@@ -47,17 +80,21 @@ IFDD_RESET      setdbr `FDD_DIGITAL_OUTPUT  ; Set Data Bank Register
                 setdbr `FDD_DIGITAL_OUTPUT
                 LDA #FDD_nRESET             ; Load the reset bit to be set
                 TSB FDD_DIGITAL_OUTPUT      ; Set the reset bit to exit the reset mode  "Test and Reset Memory Bits Against Accumulator"
-                BRK
+                RTL
 ;-------------------------------------------------------------------------------
-IFDD_RESET_FULL LDA #0                      ; Will set all the bit at 0 to reset everyting
+IFDD_RESET_FULL setas
+                LDA #0                      ; Will set all the bit at 0 to reset everyting
+                setdbr `FDD_DIGITAL_OUTPUT
                 STA  FDD_DIGITAL_OUTPUT
                 NOP                         ; wait, the doc say 100ns min
                 NOP
+                JSL ILOOP_1
                 NOP
-                NOP
+                setas
                 LDA #FDD_nRESET
+                setdbr `FDD_DIGITAL_OUTPUT
                 STA FDD_DIGITAL_OUTPUT      ; Set the reset bit to exit the reset mode
-                BRK
+                RTL
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
@@ -128,12 +165,13 @@ IFDD_SETSIDE    BRK
 ; by sensing the track0 pin of the FDD
 ;-------------------------------------------------------------------------------
 IFDD_RECALIBRATE
+                setas
                 AND #3                    ; just get the 2 first bit
                 STA FLOPPY_CMD_BUFFER+1
                 LDA #7
                 STA FLOPPY_CMD_BUFFER
-                LDA #2
-                JMP IFDD_SEND_CMD
+                LDA #2                    ; number of command Bytes
+                JSL IFDD_SEND_CMD
                 CMP #0
                 BMI IFDD_RECALIBRATE_ERROR_SEND_CMD
                 LDA #1
@@ -144,10 +182,32 @@ IFDD_RECALIBRATE_ERROR_SEND_CMD
 IFDD_RECALIBRATE_ERROR
 IFDD_RECALIBRATE_DONE
                 RTL
+
+;-------------------------------------------------------------------------------
+; Bring the head at the cylinder selected by X
+; Reg X contain cylinder to reach
+; Reg A contain the Floppy driver to work with
+;-------------------------------------------------------------------------------
+IFDD_SEEK       setas
+                AND #7                    ; Get the 3 first bit side (2) and driver (1-0)
+                STA FLOPPY_CMD_BUFFER+1
+                LDA #$F
+                STA FLOPPY_CMD_BUFFER
+                LDA X                     ; Get the cylinder index
+                STA FLOPPY_CMD_BUFFER+2
+                LDA #3                    ; number of command Bytes
+                JSL IFDD_SEND_CMD
+                CMP #0
+                BMI IFDD_SEEK_ERROR_SEND_CMD
+                LDA #1
+                BRA IFDD_SEEK_DONE
+IFDD_SEEK_ERROR_SEND_CMD
+                LDA #-1
+IFDD_SEEK_DONE
+                RTL
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-IFDD_SEEK       BRK
 IFDD_SEEKRELATIF BRK
 
 ;-------------------------------------------------------------------------------
@@ -155,11 +215,12 @@ IFDD_SEEKRELATIF BRK
 ; The data are in FLOPPY_CMD_BUFFER at address $1A000
 ; The result is also places in FLOPPY_CMD_BUFFER, the command is over writen
 ;-------------------------------------------------------------------------------
-IFDD_SEND_CMD   setdbr `FDD_MAIN_STATUE
+IFDD_SEND_CMD   PHA                       ; save the number of byt to be sent to the FDC
+                PHA                       ; alocate space on the stack to save the main statur value
+                setdbr `FDD_MAIN_STATUE
 IFDD_SEND_CMD_READ_MAIN_STATUS_REG
-                PHA                       ; save the number of byt to be sent to the FDC
                 LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we cal sent data to the FDD_CMD_BUSSY
-                PHA                       ; Save the Maine Status value
+                STA #1, S                 ; Save the Maine Status value
                 AND #$80                  ; get RQM bit
                 CMP #$80                  ; if == 1 we can read or write data from the FIFO,depending on the DIO bit value
                 BEQ IFDD_SEND_CMD_TRANSFERT_CAN_BE_DONE ;
@@ -173,19 +234,33 @@ IFDD_SEND_CMD_TRANSFERT_CAN_BE_DONE
                 AND #$40                  ; get DIO bit
                 CMP #$40                  ; if == 0 we can write data into the FIFO, if == 1 we need to read data
                 BNE IFDD_SEND_CMD_READDY_TO_SEND_DATA;
-                LDA FDD_FIFO
-                PLA                       ; remove the Main Status value saved
+                LDA FDD_FIFO                      ; remove the Main Status value saved
                 BRA IFDD_SEND_CMD_READ_MAIN_STATUS_REG  ; retest if we can send data now#
                 ;--------------- the FDC can now recuive command ---------------
 IFDD_SEND_CMD_READDY_TO_SEND_DATA
                 PLA                       ; remove the Main Status value saved
+                setdbr `Text_Start_Tx_CMD
+                LDX #<>Text_Start_Tx_CMD
+                JSL UART_PUTS
+                setdbr `FDD_MAIN_STATUE
+                LDA #1, S
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
                 LDX #0
 SEND_NEXT_DATA  LDA X
                 CMP #1, S                 ; Test if we sent all the data ot not
-                BPL ALL_DATA_SENT
+                BEQ ALL_DATA_SENT
                 LDA FLOPPY_CMD_BUFFER,X
                 STA FDD_FIFO              ; Write the data in the FDC's FIFO
                 INX
+                PHX
+                JSL ILOOP_1MS
+                JSL IFDD_PRINT_FDD_MS_REG
+                PLX
+                setas
                 setdbr `FDD_MAIN_STATUE   ; assume the FDC will never ask to read data while we are sendin the command
 READ_MAIN_STATUS_REG_FOR_TRANSFERT
                 LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we cal sent data to the FDD_CMD_BUSSY
@@ -199,7 +274,12 @@ READ_MAIN_STATUS_REG_FOR_TRANSFERT
                 ;------ The command is sent now we need to read the result -----
                 ;------ so west the dqta avaliable bit                     -----
 ALL_DATA_SENT
+                PLA                       ; removing the number of commands byte to send
+                setdbr `Text_Stop_Tx_CMD
+                LDX #<>Text_Stop_Tx_CMD
+                JSL UART_PUTS
 IFDD_SEND_CMD_RETURN_ERROR
+
                 RTL
 ;-------------------------------------------------------------------------------
 ; Reg A contain the number of data to read from the Floppy Disc Controler
@@ -247,4 +327,108 @@ READ_MAIN_STATUS_REG_FOR_TRANSFERT_2
 ALL_DATA_READ
 IFDD_READ_CMD_RESULT_RETURN_ERROR
                 RTL
+
+
+;-------------------------------------------------------------------------------
+; Print on the terminal the value of all the readeble register from the FDD
+;-------------------------------------------------------------------------------
+IFDD_PRINT_FDD_MS_REG
+                setdbr `Text_FDD_MAIN_STATUE
+                LDX #<>Text_FDD_MAIN_STATUE
+                JSL UART_PUTS
+                setdbr `FDD_MAIN_STATUE
+                LDA FDD_MAIN_STATUE
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                LDA #$A
+                ;---------------
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                RTL
+;-------------------------------------------------------------------------------
+IFDD_PRINT_REG  setas
+                setdbr `Text_FDD_STATUS_A
+                LDX #<>Text_FDD_STATUS_A
+                JSL UART_PUTS
+                setdbr `FDD_STATUS_A
+                LDA FDD_STATUS_A
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                ;---------------
+                setdbr `Text_FDD_STATUS_B
+                LDX #<>Text_FDD_STATUS_B
+                JSL UART_PUTS
+                setdbr `FDD_STATUS_B
+                LDA FDD_STATUS_B
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                ;---------------
+                setdbr `Text_FDD_DIGITAL_OUTPUT
+                LDX #<>Text_FDD_DIGITAL_OUTPUT
+                JSL UART_PUTS
+                setdbr `FDD_DIGITAL_OUTPUT
+                LDA FDD_DIGITAL_OUTPUT
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                ;---------------
+                setdbr `Text_FDD_TAPE_DRIVER
+                LDX #<>Text_FDD_TAPE_DRIVER
+                JSL UART_PUTS
+                setdbr `FDD_TAPE_DRIVER
+                LDA FDD_TAPE_DRIVER
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                ;---------------
+                setdbr `Text_FDD_MAIN_STATUE
+                LDX #<>Text_FDD_MAIN_STATUE
+                JSL UART_PUTS
+                setdbr `FDD_MAIN_STATUE
+                LDA FDD_MAIN_STATUE
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                ;---------------
+                setdbr `Text_FDD_DIGITAL_INPUT
+                LDX #<>Text_FDD_DIGITAL_INPUT
+                JSL UART_PUTS
+                setdbr `FDD_DIGITAL_INPUT
+                LDA FDD_DIGITAL_INPUT
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                ;---------------
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                RTL
+Text_Start_Tx_CMD         .text "- TX CMD Start -",$A,$D,0
+Text_Stop_Tx_CMD         .text "- TX CMD Stop -",$A,$D,0
+Text_FDD_STATUS_A         .text "FDD_STATUS_A       0x",0
+Text_FDD_STATUS_B         .text "FDD_STATUS_B       0x",0
+Text_FDD_DIGITAL_OUTPUT   .text "FDD_DIGITAL_OUTPUT 0x",0
+Text_FDD_TAPE_DRIVER      .text "FDD_TAPE_DRIVER    0x",0
+Text_FDD_MAIN_STATUE      .text "FDD_MAIN_STATUE    0x",0
+Text_FDD_DIGITAL_INPUT    .text "FDD_DIGITAL_INPUT  0x",0
+
 .include "FDD_row_TEXT_HEX.asm"
