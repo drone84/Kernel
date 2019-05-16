@@ -75,6 +75,8 @@ IFDD_MOTOR_ALL_OFF  setas
 
 IFDD_READ_FDD
                 setas
+                STA FLOPPY_CMD_BUFFER+4;;;;;;;;
+                LDA #$46 ;;;;;;;;
                 STA FLOPPY_CMD_BUFFER     ; command code 0 : MT MFM SK  0 0 1   1   0
                 LDA X                     ; command code 1 : 0  0   0   0 0 HDS DS1 DS2
                 AND #7
@@ -83,8 +85,8 @@ IFDD_READ_FDD
                 STA FLOPPY_CMD_BUFFER+2
                 LDA 0                     ; H : Head Address
                 STA FLOPPY_CMD_BUFFER+3
-                LDA 0                     ; R : Sector Address
-                STA FLOPPY_CMD_BUFFER+4
+                ;LDA 1                     ; R : Sector Address
+                ;STA FLOPPY_CMD_BUFFER+4
                 LDA 2                     ; N : Sector Size Code 0=>128 / 1=>256 / 2=>512
                 STA FLOPPY_CMD_BUFFER+5
                 LDA 1                     ; EOT : End of Track
@@ -95,6 +97,11 @@ IFDD_READ_FDD
                 STA FLOPPY_CMD_BUFFER+8
                 LDA #9                    ; number of command Bytes
                 JSL IFDD_SEND_CMD
+                setas
+                JSL IFDD_READ_DATA_FIFO
+                setas
+                LDA #7                    ; number of Bytes to read
+                JSL IFDD_READ_CMD_RESULT
                 RTL
 
 ;-------------------------------------------------------------------------------
@@ -349,10 +356,17 @@ SEND_NEXT_DATA  LDA X
                 LDA FLOPPY_CMD_BUFFER,X
                 STA FDD_FIFO              ; Write the data in the FDC's FIFO
                 INX
+                ;---------- Debug -------------
                 PHX
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
                 JSL ILOOP_1MS
                 JSL IFDD_PRINT_FDD_MS_REG
                 PLX
+                ;------------------------------
                 setas
                 setdbr `FDD_MAIN_STATUE   ; assume the FDC will never ask to read data while we are sendin the command
 READ_MAIN_STATUS_REG_FOR_TRANSFERT
@@ -445,6 +459,76 @@ IFDD_READ_CMD_RESULT_RETURN_ERROR
                 JSL UART_PUTS
                 RTL
 
+;-------------------------------------------------------------------------------
+; read the data out from the FDD
+; Stack 0-1-3-4 where to store the data
+; Stack 5-6-7-8 number of byte to read
+;-------------------------------------------------------------------------------
+IFDD_READ_DATA_FIFO
+                setxl
+                PHA                       ; alocate space on the stack to save the main statur value
+                setdbr `FDD_MAIN_STATUE
+IFDD_READ_DATA_FIFO_READ_MAIN_STATUS_REG
+                LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we cal sent data to the FDD_CMD_BUSSY
+                STA #1, S                 ; Save the Maine Status value
+                AND #FDD_RQM                  ; get RQM bit
+                CMP #$80                  ; if == 1 we can read or write data from the FIFO,depending on the DIO bit value
+                BEQ IFDD_READ_DATA_FIFO_TRANSFERT_CAN_BE_DONE ;
+                NOP
+                NOP
+                NOP
+                BRA IFDD_READ_DATA_FIFO_READ_MAIN_STATUS_REG  ; Try to read the Main register again until it get the right value (will need e timout at some point)
+                ;------------ the FDC is now avaliable for transfert -----------
+IFDD_READ_DATA_FIFO_TRANSFERT_CAN_BE_DONE
+                LDA FDD_MAIN_STATUE
+                AND #FDD_DIO              ; get DIO bit
+                CMP #$40                  ; if == 0 we can write data into the FIFO, if == 1 we need to read data
+                BEQ IFDD_READ_DATA_FIFO_READDY_TO_READ_DATA   ; We want to read the result of the command
+                PLA
+                LDA #-1                   ; error, the FDC after reciving the commans is suppos to sent you data
+                BRA IFDD_READ_DATA_FIFO_RETURN_ERROR
+IFDD_READ_DATA_FIFO_READDY_TO_READ_DATA
+                PLA
+                setdbr `Text_Start_Rx_FIFO
+                LDX #<>Text_Start_Rx_FIFO
+                JSL UART_PUTS
+                LDX 0
+IFDD_READ_DATA_FIFO_READ_NEXT_DATA
+                setdbr `FDD_FIFO
+                LDA FDD_FIFO              ; Read the data from the FDC's FIFO
+                setdbr`$19A000
+                STA $19A000 ,X            ; Save it in the Buffer
+                INC X
+                CPX #512
+                BEQ ALL_DATA_READ_2
+                PHX
+                ;LDA X
+                JSL UART_PUTHEX
+                LDA #$20
+                JSL UART_PUTC
+                PLX
+                setdbr `FDD_MAIN_STATUE   ; assume the FDC will never ask to read data while we are sendin the command
+READ_MAIN_STATUS_REG_FOR_TRANSFERT_3
+                LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we cal sent data to the FDD_CMD_BUSSY
+                AND #FDD_RQM              ; get RQM bit
+                CMP #$80                  ; if == 1 we can read or write data from the FIFO,depending on the DIO bit value
+                BEQ IFDD_READ_DATA_FIFO_READ_NEXT_DATA
+                NOP
+                NOP
+                NOP
+                BRA READ_MAIN_STATUS_REG_FOR_TRANSFERT_3  ; Try to read the Main register again until it get the right value (will need e timout at some point)
+ALL_DATA_READ_2
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                JSL IFDD_PRINT_FDD_MS_REG
+                LDA #0
+IFDD_READ_DATA_FIFO_RETURN_ERROR
+                setdbr `Text_Stop_Rx_FIFO
+                LDX #<>Text_Stop_Rx_FIFO
+                JSL UART_PUTS
+                RTL
 
 ;-------------------------------------------------------------------------------
 ; Print on the terminal the value of the Main Status Register from the FDD
@@ -545,6 +629,10 @@ Text_Start_Tx_CMD         .text "- TX CMD Start -",$A,$D,0
 Text_Stop_Tx_CMD         .text "- TX CMD Stop -",$A,$D,0
 Text_Start_Rx_CMD         .text "- RX CMD Start -",$A,$D,0
 Text_Stop_Rx_CMD         .text "- RX CMD Stop -",$A,$D,0
+Text_Start_Rx_FIFO         .text "- RX FIFO Start -",$A,$D,0
+Text_Stop_Rx_FIFO         .text "- RX FIFO Stop -",$A,$D,0
+
+
 
 Text_FDD_STATUS_A         .text "FDD_STATUS_A       0x",0
 Text_FDD_STATUS_B         .text "FDD_STATUS_B       0x",0

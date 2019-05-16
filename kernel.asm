@@ -147,7 +147,10 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 setaxl
                 JSL IFDD_INIT_AT
                 JSL IFDD_PRINT_REG  ; read the FDD register value
-seek_loop       setas
+seek_loop
+                LDA 0
+                PHA
+seek_loop_2     setas
                 LDA #0              ; Sellect the floppy disc drive 0
                 JSL IFDD_RECALIBRATE
                 setaxl
@@ -156,10 +159,30 @@ seek_loop       setas
                 setdbr `minus_line
                 LDX #<>minus_line
                 JSL UART_PUTS
+                ;JSL UART_GETC
+                setas
+                LDA #1, S
+                ;TAX
+                ;LDA #$46
+                LDX #$00
+                JSL IFDD_READ_FDD
+                LDA #1, S
+                INC A
+                STA #1, S
+                JSL IFDD_PRINT_REG
+                ;BRA fdd_loop_forever
                 setas
                 LDA #0
                 LDX #30
                 JSL IFDD_SEEK
+
+                JSL IFDD_MOTOR_0_OFF
+                LDX #20000
+                JSL ILOOP_MS
+                JSL IFDD_MOTOR_0_ON
+                LDX #20000
+                JSL ILOOP_MS
+                BRA seek_loop_2
                 JSL IFDD_PRINT_REG  ; read the FDD register value
                 setaxl
                 LDX #20000
@@ -187,10 +210,10 @@ seek_loop       setas
                 ;JSL IFDD_PRINT_REG  ; read the FDD register value
                 ;--------
                 ;code needed because the BRA seek_loop at the en of the code block was too far
-                BRA seek_loop
+                ;BRA seek_loop
                 BRA next_instruction
 seek_loop_step1
-                BRA seek_loop
+                ;BRA seek_loop
 next_instruction
                 ;--------
                 setdbr `minus_line

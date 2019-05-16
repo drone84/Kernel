@@ -13,16 +13,19 @@ MASTER_CTRL_REG_H	      = $AF0001
 ; Reserved - TBD
 VKY_RESERVED_00         = $AF0002
 VKY_RESERVED_01         = $AF0003
-BORDER_CTRL_REG         = $AF0004
+
 Border_Ctrl_Enable      = $01
 
-BORDER_COLOR_B          = $AF0005
-BORDER_COLOR_G          = $AF0006
-BORDER_COLOR_R          = $AF0007
+BORDER_CTRL_REG = $AF0004 ; Bit[0] - Enable (1 by default)  Bit[4..6]: X Scroll Offset ( Will scroll Left) (Acceptable Value: 0..7)
+BORDER_COLOR_B  = $AF0005
+BORDER_COLOR_G = $AF0006
+BORDER_COLOR_R  = $AF0007
+BORDER_X_SIZE        = $AF0008; X-  Values: 0 - 32 (Default: 32)
+BORDER_Y_SIZE        = $AF0009; Y- Values 0 -32 (Default: 32)
 
-BACKGROUND_COLOR_B      = $AF0008 ; When in Graphic Mode, if a pixel is "0" then the Background pixel is chosen
-BACKGROUND_COLOR_G      = $AF0009
-BACKGROUND_COLOR_R      = $AF000A ;
+BACKGROUND_COLOR_B      = $AF000D ; When in Graphic Mode, if a pixel is "0" then the Background pixel is chosen
+BACKGROUND_COLOR_G      = $AF000E
+BACKGROUND_COLOR_R      = $AF000F;
 
 VKY_TXT_CURSOR_CTRL_REG = $AF0010   ;[0]  Enable Text Mode
 Vky_Cursor_Enable       = $01
