@@ -327,6 +327,7 @@ done        PLP
 ;   X = the port to use
 ;
 UART_PUTHEX   .proc
+            PHP
             PHA               ; save the value before converting the High part into ASCII
             LSR A             ; Extracting the high part of the byte
             LSR A
@@ -343,5 +344,35 @@ UART_PUTHEX   .proc
             LDA hex_digits,x
             LDX #0
             JSL UART_PUTC
+            PLP
+            RTL
+            .pend
+UART_PUTHEX_2   .proc
+            PHP
+            setaxl
+            PHX
+            PHA             ; save the value before converting the High part into ASCII
+            LDA #$0
+            setas
+            LDA #1, S       ; get the original value out of the stack
+            LSR A             ; Extracting the high part of the byte
+            LSR A
+            LSR A
+            LSR A
+            AND #$F
+            LDX A
+            LDA hex_digits,x
+            LDX #$0
+            JSL UART_PUTC
+            LDA #1, S       ; get the original value out of the stack
+            AND #$F         ; Extracting the low part of the byte
+            LDX A
+            LDA hex_digits,x
+            LDX #$0
+            JSL UART_PUTC
+            setaxl
+            PLA
+            PLX
+            PLP
             RTL
             .pend

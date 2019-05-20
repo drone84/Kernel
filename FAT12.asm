@@ -197,7 +197,7 @@ IFAT12_GET_ROOT_DIR_POS
                   TAX
                   LDA Sector_per_Fat
 ADD_ONE_FAT       DEC X
-                  CPX 0
+                  CPX #0
                   BEQ FDD_END_LOOP_FAT_SECTOR_USAGE
                   CLC
                   ADC Sector_per_Fat
@@ -228,7 +228,7 @@ IFAT12_GET_ROOT_ENTRY
                   CMP Max_Root_Entry
                   BPL FAT23_ERROR_NB_ROOT_ENTRY_INDEX
                   PHA ; Save the root entry index we want to read
-                  LDX 0 ; compute in witch sector the desired root entry is, 16 entry per sector so we just need to divit the sector size by 16
+                  LDX #0 ; compute in witch sector the desired root entry is, 16 entry per sector so we just need to divit the sector size by 16
 KEEP_SHIFT_ROOT_ENTRY_INDEX
                   LSR
                   INC X
