@@ -19,6 +19,7 @@
 .include "OPL2_Library.asm"   ; Library code to drive the OPL2 (right now, only in mono (both side from the same data))
 .include "Floppy.asm"
 .include "FAT12.asm"
+.include "MIDI_MPU_401_def.asm"
 .include "uart.s"
 ; C256 Foenix Kernel
 ; The Kernel is located in flash @ F8:0000 but not accessible by CPU
@@ -142,6 +143,73 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 ;JSL UART_PUTS
 
                 ;---------------------------------------------------------------
+                ; Joystic test code START
+
+; Joystic_Loop    LDA JOYSTICK0
+;                 LDA JOYSTICK1
+;                 LDA JOYSTICK2
+;                 LDA JOYSTICK3
+;                 LDX #2000    ; 2s
+;                 JSL ILOOP_MS
+;                 ;;BRA Joystic_Loop
+;                 ;---------------------------------------------------------------
+;                 ; PPT test code START
+;
+;
+;                 ;---------------------------------------------------------------
+;                 ; MIDI test code START
+;
+;                 ;;LDA #$A
+;                 ;;JSL UART_PUTC
+;                 ;;LDA #$D
+;                 ;;JSL UART_PUTC
+;                 ; the command are listed in "MIDI PROCESSING UNIT - MPU-401 - TECHNICAL REFERENCE MANUAL" from Roland
+;                 setas
+;                 ;;LDA #$89        ; MIDI THRU on
+;                 ;;STA MIDI_MPU_COMMAND
+;                 ;;LDX #20000      ; 2s
+;                 ;;JSL ILOOP_MS
+;                 ;;BRA Loop_MIDI
+;                 LDA #$FF        ; reset the module
+;                 STA MIDI_MPU_COMMAND
+;                 LDX #100
+;                 JSL ILOOP_MS
+;                 LDA MIDI_DATA  ; get the 0xFE out of the way after the resaet if on the module was in MIDI mode
+;                 LDA #$3F        ; set the module in UART mode
+;                 STA MIDI_MPU_COMMAND
+;                 LDX #100
+;                 JSL ILOOP_MS
+;                 LDA MIDI_DATA  ; get the 0xFE out of the way
+;                 LDX #100
+;                 JSL ILOOP_MS
+;                 ;;LDX #100
+;                 ;;JSL ILOOP_MS
+;                 ;;LDA #$90        ; Note ON  90 50 7F => 9x | Note | Velocity
+;                 ;;STA MIDI_MPU_COMMAND
+;               ;;  LDX #100
+;                 ;;JSL ILOOP_MS
+;                 ;;LDA #$50
+;                 ;;STA MIDI_MPU_COMMAND
+;                 ;;LDX #100
+;                 ;;JSL ILOOP_MS
+;                 ;;LDA #$7F
+;                 ;;STA MIDI_MPU_COMMAND
+;                 ;;LDX #100
+;                 ;;JSL ILOOP_MS
+; Loop_MIDI       ; this code will acte as a MIDI thru
+;                 LDA MIDI_MPU_STATUS
+;                 CMP 0
+;                 BNE Loop_MIDI     ; no data recieved
+;                 LDA MIDI_DATA    ; read the byte crecieved
+;                 STA MIDI_DATA    ; dent it on the midi output
+;
+;                 JSL UART_PUTHEX_2 ; print the recieved command on  the uart console
+;                 LDA #$A
+;                 JSL UART_PUTC
+;                 LDA #$D
+;                 JSL UART_PUTC
+;                 ;;;;;;;;;;;;;;;;;;;;BRA Loop_MIDI
+                ;---------------------------------------------------------------
                 ; Floppy test code START
                 setdbr `minus_line
                 LDX #<>minus_line
@@ -168,27 +236,27 @@ ERAZE_SCREEN_2  STA $AFA200 ,X
                 INX
                 CPX #$2000
                 BNE ERAZE_SCREEN_2
-
+                ;--------
                 LDA #0                      ; Floppy driver to work with and side
                 LDX #1                      ; MFM:1/FM:0
                 JSL IFDD_READ_ID
                 JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
                 JSL IFDD_SENS_INTERRUPT_STATUS
                 JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
-
+                ;--------
                 LDA #$1                     ; ND ("1":non-DMA mode / "0":DMA mode)
-                PLA
+                PHA
                 LDA #$0                     ; HLT (Head Load Time)
-                PLA
+                PHA
                 LDA #$0                     ; HUT (Head Unload Time)
-                PLA
+                PHA
                 LDA #$0                     ; SRT (Step Rate Time)
-                PLA
+                PHA
                 JSL IFDD_SPECIFY
-                PHA
-                PHA
-                PHA
-                PHA
+                PLA
+                PLA
+                PLA
+                PLA
                 JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
 
                 LDA #0                      ; Floppy driver to work with and side
@@ -203,34 +271,34 @@ ERAZE_SCREEN_2  STA $AFA200 ,X
                 JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
                 setas
                 LDA #$0                    ; R (Sector Adress)
-                PLA
+                PHA
                 LDA #$0                    ; H (Head Address)
-                PLA
+                PHA
                 LDA #$0                    ; C (Cylender Adress)
-                PLA
+                PHA
                 LDA #$AA                    ; D (Byte filler)
-                PLA
+                PHA
                 LDA #$54                    ; GPL (Gap3)
-                PLA
+                PHA
                 LDA #$9                    ; SC (Sector Per Cylender)
-                PLA
+                PHA
                 LDA #$2                    ; N (Byte per sector)
-                PLA
+                PHA
                 LDA #$0                    ; HDS/DS1-DS0 (Head DRIVE1-Drive0)
-                PLA
+                PHA
                 LDA #$1                    ; MFM
-                PLA
+                PHA
                 LDA #$FF
-                ;JSL IFDD_FORMAT_TRACK
-                PHA
-                PHA
-                PHA
-                PHA
-                PHA
-                PHA
-                PHA
-                PHA
-                PHA
+                JSL IFDD_FORMAT_TRACK
+                PLA
+                PLA
+                PLA
+                PLA
+                PLA
+                PLA
+                PLA
+                PLA
+                PLA
                 setaxl
                 LDX #5000
                 JSL ILOOP_MS

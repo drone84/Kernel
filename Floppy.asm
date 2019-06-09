@@ -374,7 +374,7 @@ IFDD_FORMAT_TRACK
                 LDA #6                    ; number of command Bytes
                 JSL IFDD_SEND_CMD
                 CMP #0
-                BMI IFDD_FORMAT_TRACK_ERROR_SEND_CMD
+                BNE IFDD_FORMAT_TRACK_ERROR_SEND_CMD
 
                 LDA #10+7, S         ; Get C (Cylender Adress)
                 STA FLOPPY_CMD_BUFFER
@@ -382,12 +382,13 @@ IFDD_FORMAT_TRACK
                 STA FLOPPY_CMD_BUFFER+1
                 LDA #12+7, S         ; Get N (Sector size code)
                 STA FLOPPY_CMD_BUFFER+3
-                LDA #11+7, S         ; Get R (Sector Adress)
+                LDA #13+7, S         ; Get R (Sector Adress)
 Format_next_sector
                 STA FLOPPY_CMD_BUFFER+2
                 LDA #4
                 JSR IFDD_SEND_EXECUTION_DATA
-
+                CMP #0
+                BMI IFDD_FORMAT_TRACK_ERROR_SEND_CMD
                 LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we cal sent data to the FDD_CMD_BUSSY
                 AND #20                  ; get NON DMA bit, will stay 1 until the Executuin phase
                 CMP #$20
@@ -435,8 +436,11 @@ IFDD_SEND_EXECUTION_DATA
                 PHA                       ; alocate space on the stack to save the main statur value
                 setdbr `FDD_MAIN_STATUE
 IFDD_SEND_EXECUTION_DATA____READ_MAIN_STATUS_REG
-                LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we cal sent data to the FDD_CMD_BUSSY
+                LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we can send data to the FDD_CMD_BUSSY
                 STA #1, S                 ; Save the Maine Status value
+                PHA
+                JSL UART_PUTHEX_2
+                PLA
                 AND #FDD_RQM                  ; get RQM bit
                 CMP #$80                  ; if == 1 we can read or write data from the FIFO,depending on the DIO bit value
                 BEQ IFDD_SEND_EXECUTION_DATA____TRANSFERT_CAN_BE_DONE ;
@@ -450,7 +454,25 @@ IFDD_SEND_EXECUTION_DATA____TRANSFERT_CAN_BE_DONE
                 AND #FDD_DIO                  ; get DIO bit
                 CMP #$40                  ; if == 0 we can write data into the FIFO, if == 1 we need to read data
                 BNE IFDD_SEND_EXECUTION_DATA____READY_TO_SEND_DATA;
-                LDA FDD_FIFO                      ; remove the Main Status value saved
+                ;---- debug ------
+                LDA FDD_FIFO
+                JSL UART_PUTHEX_2
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                ; setas
+                ; PLA                       ; removing the number of commands byte to send
+                ; PLA                       ; removing the Main Status saved byte
+                ; LDA #-1
+                ; ;--------------------- Restore the register ------------------------
+                ; setaxl
+                ; PLA
+                ; PLX
+                ; PLD
+                ; PLP
+                ; RTL
+                ;-- debug end ----
                 BRA IFDD_SEND_EXECUTION_DATA____READ_MAIN_STATUS_REG  ; retest if we can send data now#
                 ;--------------- the FDC can now recuive command ---------------
 IFDD_SEND_EXECUTION_DATA____READY_TO_SEND_DATA
@@ -526,7 +548,7 @@ IFDD_SEND_EXECUTION____JUMP_BYPASS
                 NOP
                 BRA IFDD_SEND_EXECUTION____READ_MAIN_STATUS_REG_FOR_TRANSFERT  ; Try to read the Main register again until it get the right value (will need e timout at some point)
                 ;------ The command is sent now we need to read the result -----
-                ;------ so west the data avaliable bit                     -----
+                ;------ so test the data avaliable bit                     -----
 IFDD_SEND_EXECUTION_DATA____ALL_DATA_ECUTION_SENT
                 PLA                       ; removing the number of commands byte to send
                 LDA #0
