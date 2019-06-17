@@ -229,17 +229,14 @@ IFDD_INIT_AT    setaxl
                 LDX #<>Text_INIT_AT
                 JSL UART_PUTS
                 JSL IFDD_RESET_FULL         ; Reset FDD : No DMA, Drive 0 selected, no motor activated
-                ;-----------------------
+                setdbr `FDD_CONFIG_CTRL  ; Set Data Bank Register
+                LDA #$02
+                TSB FDD_CONFIG_CTRL
                 setdbr `FDD_DATA_RATE_SELECT  ; Set Data Bank Register
                 LDA #$00
-                STA FDD_DATA_RATE_SELECT
-                ;-----------------------
-                setdbr `FDD_CONFIG_CTRL  ; Set Data Bank Register
-                LDA #$00
-                STA FDD_CONFIG_CTRL         ; 500kbs on MFM modr
-                ;-----------------------
+                TSB FDD_DATA_RATE_SELECT
                 setdbr `FDD_DIGITAL_OUTPUT  ; Set Data Bank Register
-                LDA #$10                    ; active drive motor output 0 and sellect drive 0 (bit 0-1)
+                LDA #$F0                    ; active all motor output and sellect drive 0 (bit 0-1)
                 TSB FDD_DIGITAL_OUTPUT      ; Set the reset bit to exit the reset mode  "Test and Reset Memory Bits Against Accumulator"
                 RTL
 ;-------------------------------------------------------------------------------
@@ -251,11 +248,11 @@ IFDD_RESET      setdbr `FDD_DIGITAL_OUTPUT  ; Set Data Bank Register
                 JSL ILOOP_1
                 ; reset the DATA_RATE_SELECT register : automatic low Power, Pres Comp => Default See tab 10 in FDC doc, Data Rate to 250 Kbps
                 setdbr `FDD_DATA_RATE_SELECT
-                LDA #0 ; LDA #2
+                LDA #2
                 STA FDD_DATA_RATE_SELECT    ; if in mode PC/AT or PS/2 the datarate is set in Config Control Register
                 JSL ILOOP_1MS
                 setdbr `FDD_CONFIG_CTRL
-                LDA #0
+                LDA #2
                 STA FDD_CONFIG_CTRL
                 ; exit the reset mode
                 setdbr `FDD_DIGITAL_OUTPUT
@@ -344,75 +341,6 @@ IFDD_SETSECTOR  BRK
 IFDD_SETTRACK  BRK
 IFDD_SETSIDE    BRK
 
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-;-------------------------------------------------------------------------------
-
-IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD  .proc
-                PHP
-                PHD
-                setaxl
-                PHX
-                PHA
-                setas
-                ;---------------------------------------------------------------
-                setdbr `Text_MAKE_IT_READY
-                LDX #<>Text_MAKE_IT_READY
-                JSL UART_PUTS
-                ;---------------------------------------------------------------
-                PHA                       ; alocate space on the stack to save the main statur value
-IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____READ_MAIN_STATUS_REG
-                setdbr `FDD_MAIN_STATUE
-                LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we can send data to the FDD_CMD_BUSSY
-                STA #1, S                 ; Save the Maine Status value
-                ;---------- DEBUG ---------
-                PHA
-                JSL UART_PUTHEX_2
-                PLA
-                ;------- DEBUG END --------
-                CMP #$80                      ; if == 1 we can read or write data from the FIFO,depending on the DIO bit value
-                BEQ IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____FDD_READY
-
-                AND #FDD_RQM                  ; get RQM bit
-                CMP #$80
-                BEQ IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____TRANSFERT_CAN_BE_DONE ;
-                NOP
-                NOP
-                NOP
-                NOP
-                BRA IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____READ_MAIN_STATUS_REG
-IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____TRANSFERT_CAN_BE_DONE
-                LDA #1, S
-                AND #FDD_DIO                  ; get DIO bit
-                CMP #$40                      ; if == 0 we can write data into the FIFO, if == 1 we need to read data
-                BNE IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____READY_TO_SEND_DATA;
-                LDA FDD_FIFO
-                BRA IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____READ_MAIN_STATUS_REG
-IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____READY_TO_SEND_DATA
-                LDA #1, S
-                AND #FDD_DRIVER_BUSY
-                CMP #$0
-                BEQ IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____FDD_RIVER_NOT_BUSY;
-                JSL IFDD_SENS_INTERRUPT_STATUS
-IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____FDD_RIVER_NOT_BUSY
-                BRA IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____READ_MAIN_STATUS_REG
-                IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD____FDD_READY
-                PLA
-                ;---------------------------------------------------------------
-                setaxl
-                PLA
-                PLX
-                PLD
-                PLP
-                RTL
-                .pend
-
-
-
-
-
-
 
 ;-------------------------------------------------------------------------------
 ;------ Read the Main Status Register intil the MSB is set then returne --------
@@ -453,15 +381,14 @@ IFDD_WAIT_FOR_TRANSFERT_READY   .proc
                 AND #FDD_DIO                  ; get DIO bit
                 CMP #$40                      ; if == 0 we can write data into the FIFO, if == 1 we need to read data
                 BNE IFDD_WAIT_FOR_TRANSFERT_READY____READY_TO_SEND_DATA;
-                LDA #1
+                LDA #0
                 BRA IFDD_WAIT_FOR_TRANSFERT_READY____READY_TO_READ_DATA
 IFDD_WAIT_FOR_TRANSFERT_READY____READY_TO_SEND_DATA
-                LDA #0
+                LDA #1
 IFDD_WAIT_FOR_TRANSFERT_READY____READY_TO_READ_DATA
                 ;---------------------------------------------------------------
                 setaxl
-                ;PLA
-                PLX
+                PLA
                 PLX
                 PLD
                 PLP
@@ -498,7 +425,6 @@ IFDD_FORMAT_TRACK
                 setaxl
                 PHX
                 PHA ; stack ofset of 7 need to be addes to get the parametters
-                JSL IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD
                 setas
                 LDA #4+7, S         ; Get the MFM Byte
                 AND #1            ; Get only the MFM 1 bits info
@@ -530,14 +456,13 @@ IFDD_FORMAT_TRACK
                 CMP #0
                 BNE IFDD_FORMAT_TRACK_ERROR_SEND_CMD
 
-                ;setdbr `FLOPPY_CMD_BUFFER
                 LDA #10+7, S         ; Get C (Cylender Adress)
                 STA FLOPPY_CMD_BUFFER
                 LDA #11+7, S         ; Get H (Head Address)
                 STA FLOPPY_CMD_BUFFER+1
-                LDA #12+7, S         ; Get R (Sector size code)
+                LDA #12+7, S         ; Get N (Sector size code)
                 STA FLOPPY_CMD_BUFFER+3
-                LDA #6+7, S ; LDA #6+7, S ;LDA #13+7, S         ; Get R (Sector Adress)
+                LDA #13+7, S         ; Get R (Sector Adress)
 Format_next_sector
                 STA FLOPPY_CMD_BUFFER+2
                 LDA #4
@@ -547,7 +472,7 @@ Format_next_sector
                 setas
                 LDA #7                    ; number of Bytes to read
                 JSL IFDD_READ_CMD_RESULT
-                BRA IFDD_FORMAT_TRACK_ERROR_SEND_CMD
+                JMP IFDD_FORMAT_TRACK_ERROR_SEND_CMD
 Format_Execution_parametter_sent_ok
                 setas
                 LDA FDD_MAIN_STATUE       ; read bit 6 and 7 to see if we cal sent data to the FDD_CMD_BUSSY
@@ -569,8 +494,7 @@ IFDD_FORMAT_TRACK_ERROR_SEND_CMD
                 LDA #-1
 IFDD_FORMAT_TRACK_DONE
                 setaxl
-                ;PLA
-                PLX ; used to remove the PHA value from the begining but wisout destroying the value in reg A
+                PLA
                 PLX
                 PLD
                 PLP
@@ -593,29 +517,19 @@ IFDD_SEND_EXECUTION_DATA
                 setaxl
                 PHX
                 PHA ; stack ofset of 7 need to be addes to get the parametters
-                ;-----------
-                LDA #$2B ; +
-                JSL UART_PUTC
-                LDA #1, S
-                ;-----------
                 ;----------- Scan the Main Status Byte until data can be send
                 ;----------- "FDD_RQM" bits AND data can be send "FDD_DIO"==0
                 setas
                 PHA                       ; save the number of byt to be sent to the FDC
                 JSL IFDD_WAIT_FOR_TRANSFERT_READY ; Return 1 if the FDC is readdy to recieve data
-                PHA
-                JSL UART_PUTHEX_2
-                PLA
-                CMP #0
+                CMP #1
                 BNE IFDD_SEND_EXECUTION_DATA____ERROR_SEND_EXECUTION_DATA_1
-                LDA #$21 ; !
-                JSL UART_PUTC
+                setdbr `FLOPPY_CMD_BUFFER
                 LDX #0
 IFDD_SEND_EXECUTION_DATA____SEND_NEXT_ECUTION_DATA
                 LDA X
                 CMP #1, S                 ; Test if we sent all the data ot not
                 BEQ IFDD_SEND_EXECUTION_DATA____ALL_DATA_ECUTION_SENT_1
-                setdbr `FLOPPY_CMD_BUFFER
                 LDA FLOPPY_CMD_BUFFER,X
                 STA FDD_FIFO              ; Write the data in the FDC's FIFO
                 ;INX
@@ -633,7 +547,6 @@ IFDD_SEND_EXECUTION_DATA____SEND_NEXT_ECUTION_DATA
                 JSL UART_PUTS
                 PLX
                 PHX
-                setdbr `FLOPPY_CMD_BUFFER
                 LDA FLOPPY_CMD_BUFFER,X
                 JSL UART_PUTHEX_2
                 LDX #<>Text_EOL
@@ -648,10 +561,7 @@ IFDD_SEND_EXECUTION_DATA____SEND_NEXT_ECUTION_DATA
 IFDD_SEND_EXECUTION____READ_MAIN_STATUS_REG_FOR_TRANSFERT
                 ;------------------DEBUG--------------
                 BRA IFDD_SEND_EXECUTION____JUMP_BYPASS
-IFDD_SEND_EXECUTION_DATA____ERROR_SEND_EXECUTION_DATA_1
-                LDA #$7E ; ~
-                JSL UART_PUTC
-                BNE IFDD_SEND_EXECUTION_DATA____ERROR_SEND_EXECUTION_DATA
+IFDD_SEND_EXECUTION_DATA____ERROR_SEND_EXECUTION_DATA_1 BNE IFDD_SEND_EXECUTION_DATA____ERROR_SEND_EXECUTION_DATA
 IFDD_SEND_EXECUTION_DATA____ALL_DATA_ECUTION_SENT_1 BRA IFDD_SEND_EXECUTION_DATA____ALL_DATA_ECUTION_SENT
 IFDD_SEND_EXECUTION____JUMP_BYPASS
                 LDA FDD_MAIN_STATUE
@@ -698,9 +608,8 @@ IFDD_SEND_EXECUTION_DATA____ERROR_SEND_EXECUTION_DATA
 IFDD_SEND_EXECUTION_DATA____EXIT
                 ;--------------------- Restore the register ------------------------
                 setaxl
-                ;PLA
                 PLX
-                PLX
+                PLA
                 PLD
                 PLP
                 RTL
@@ -873,72 +782,7 @@ IFDD_SEEK_DONE
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
-IFDD_SEEKRELATIF_UP PHP
-                PHD
-                setaxl
-                PHX
-                PHA
-                setaxs
-                AND #7                    ; Get the 3 first bit side (2) and driver (1-0)
-                setdbr `FLOPPY_CMD_BUFFER
-                STA FLOPPY_CMD_BUFFER+1
-                LDA #$8F
-                STA FLOPPY_CMD_BUFFER
-                LDA X                     ; Get the cylinder index
-                STA FLOPPY_CMD_BUFFER+2
-                setxl
-                setdbr `Text_SEEK
-                LDX #<>Text_SEEK
-                JSL UART_PUTS
-                LDA #3                    ; number of command Bytes
-                JSL IFDD_SEND_CMD
-                CMP #0
-                BMI IFDD_SEEKRELATIF_UP_ERROR_SEND_CMD
-                LDA #1
-                BRA IFDD_SEEKRELATIF_UP_DONE
-IFDD_SEEKRELATIF_UP_ERROR_SEND_CMD
-                LDA #-1
-IFDD_SEEKRELATIF_UP_DONE
-                setaxl
-                PLA
-                PLX
-                PLD
-                PLP
-                RTL
-
-IFDD_SEEKRELATIF_DOWN PHP
-                PHD
-                setaxl
-                PHX
-                PHA
-                setaxs
-                AND #7                    ; Get the 3 first bit side (2) and driver (1-0)
-                setdbr `FLOPPY_CMD_BUFFER
-                STA FLOPPY_CMD_BUFFER+1
-                LDA #$CF
-                STA FLOPPY_CMD_BUFFER
-                LDA X                     ; Get the cylinder index
-                STA FLOPPY_CMD_BUFFER+2
-                setxl
-                setdbr `Text_SEEK
-                LDX #<>Text_SEEK
-                JSL UART_PUTS
-                LDA #3                    ; number of command Bytes
-                JSL IFDD_SEND_CMD
-                CMP #0
-                BMI IFDD_SEEKRELATIF_DOW_ERROR_SEND_CMD
-                LDA #1
-                BRA IFDD_SEEKRELATIF_DOW_DONE
-IFDD_SEEKRELATIF_DOW_ERROR_SEND_CMD
-                LDA #-1
-IFDD_SEEKRELATIF_DOW_DONE
-                setaxl
-                PLA
-                PLX
-                PLD
-                PLP
-                RTL
-;-------------------------------------------------------------------------------
+IFDD_SEEKRELATIF BRK
 ;-------------------------------------------------------------------------------
 ;-------------------------------------------------------------------------------
 ;-------------------------------- READ ID --------------------------------------
@@ -972,7 +816,6 @@ IFDD_READ_ID
                 setaxl
                 PHA
                 PHX
-                JSL IFDD_MAKE_IT_READDY_TO_RECIEVE_CMD
                 setas
                 AND #7                    ; Get the 3 first bit HDS (2) and driver (1-0)
                 setdbr `FLOPPY_CMD_BUFFER
@@ -1546,8 +1389,6 @@ Text_SENS_INTERRUPT_STATUS .text "------------ SENS_INTERRUPT_STATUS -----------
 Text_FORMAT               .text "-------------------- FORMAT -------------------",$A,$D,0
 Text_SEEK                 .text "--------------------- SEEK --------------------",$A,$D,0
 Text_SPECIFY               .text "------------------- SPECIFY ------------------",$A,$D,0
-
-Text_MAKE_IT_READY        .text "---------------- MAKE_IT_READY ----------------",$A,$D,0
 
 Text_SEND_CMD         .text "- SEND CMD Start -",$A,$D,0
 Text_Stop_Tx_CMD          .text "- TX CMD Stop -",$A,$D,0

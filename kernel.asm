@@ -231,18 +231,18 @@ seek_loop
                 BNE ERAZE_SCREEN_1
                 setdbr`$AFA200
                 LDX #0
-seek_loop_2     LDA #0
+seek_loop_2_     LDA #0
 ERAZE_SCREEN_2  STA $AFA200 ,X
                 INX
                 CPX #$2000
                 BNE ERAZE_SCREEN_2
                 ;--------
-                LDA #0                      ; Floppy driver to work with and side
-                LDX #1                      ; MFM:1/FM:0
-                JSL IFDD_READ_ID
-                JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
-                JSL IFDD_SENS_INTERRUPT_STATUS
-                JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
+                ; LDA #0                      ; Floppy driver to work with and side
+                ; LDX #1                      ; MFM:1/FM:0
+                ; JSL IFDD_READ_ID
+                ; JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
+                ; JSL IFDD_SENS_INTERRUPT_STATUS
+                ; JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
                 ;--------
                 LDA #$1                     ; ND ("1":non-DMA mode / "0":DMA mode)
                 PHA
@@ -252,23 +252,23 @@ ERAZE_SCREEN_2  STA $AFA200 ,X
                 PHA
                 LDA #$0                     ; SRT (Step Rate Time)
                 PHA
-                JSL IFDD_SPECIFY
+                ;;JSL IFDD_SPECIFY
                 PLA
                 PLA
                 PLA
                 PLA
-                JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
-
+                ;JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
+                setas
                 LDA #0                      ; Floppy driver to work with and side
                 LDX #1                      ; MFM:1/FM:0
                 JSL IFDD_READ_ID
                 JSL IFDD_SENS_INTERRUPT_STATUS
-
-                LDA #0            ; Sellect the floppy disc drive 0
-                JSL IFDD_RECALIBRATE
-                JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
-                JSL IFDD_SENS_INTERRUPT_STATUS
-                JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
+                ;
+                ; ; LDA #0            ; Sellect the floppy disc drive 0
+                ; ; JSL IFDD_RECALIBRATE
+                ; ; ;JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
+                ; ; JSL IFDD_SENS_INTERRUPT_STATUS
+                ; ; ;JSL IFDD_PRINT_FDD_MS_REG  ; read the FDD register value
                 setas
                 LDA #$0                    ; R (Sector Adress)
                 PHA
@@ -309,35 +309,86 @@ ERAZE_SCREEN_2  STA $AFA200 ,X
                 JSL IFDD_READ_ID
                 LDX #2000
                 JSL ILOOP_MS
-                JSL IFDD_PRINT_REG
-                LDX #2000
-                JSL ILOOP_MS
-                JSL IFDD_SENS_INTERRUPT_STATUS
-                LDX #$00
+                ;JSL IFDD_PRINT_REG
+                ;LDX #2000
+                ;JSL ILOOP_MS
+                ;;JSL IFDD_SENS_INTERRUPT_STATUS
+                ;LDX #$00
                 ;JSL IFDD_READ_FDD
-                JSL IFDD_SENS_INTERRUPT_STATUS
-                LDX #2000
-                JSL ILOOP_MS
-                LDA #1, S            ; read the next sector
-                INC A
-                STA #1, S
-                JSL IFDD_PRINT_REG
+                ;JSL IFDD_SENS_INTERRUPT_STATUS
+                ;LDX #2000
+                ;JSL ILOOP_MS
+                ; LDA #1, S            ; read the next sector
+                ; INC A
+                ; STA #1, S
+                ; JSL IFDD_PRINT_REG
                 ;BRA fdd_loop_forever
+
+seek_loop_2
+
+
                 setas
                 LDA #0
-                LDX #60
-                JSL IFDD_SEEK
+                LDX #10
+                JSL IFDD_SEEKRELATIF_UP ;JSL IFDD_SEEK
                 LDX #20000
                 JSL ILOOP_MS
+                setas
+                LDA #0
+                LDX #20
+                JSL IFDD_SEEKRELATIF_UP ;JSL IFDD_SEEK
+                LDX #20000
+                JSL ILOOP_MS
+                setas
+                LDA #0
+                LDX #20
+                JSL IFDD_SEEKRELATIF_DOWN ;JSL IFDD_SEEK
+                LDX #20000
+                JSL ILOOP_MS
+                setas
+                LDA #0
+                LDX #5
+                JSL IFDD_SEEKRELATIF_UP ;JSL IFDD_SEEK
+                LDX #20000
+                JSL ILOOP_MS
+                setas
+                LDA #0
+                LDX #10
+                JSL IFDD_SEEKRELATIF_DOWN ;JSL IFDD_SEEK
+                LDX #20000
+                JSL ILOOP_MS
+                setas
+                LDA #0
+                LDX #5
+                JSL IFDD_SEEKRELATIF_DOWN ;JSL IFDD_SEEK
+                LDX #20000
+                JSL ILOOP_MS
+                JSL IFDD_SENS_INTERRUPT_STATUS
+                setas
+                LDA 0
+                LDX #1                      ; MFM:1/FM:0
+                ;;;;;JSL IFDD_READ_ID
+                ; setas
+                ; JSL IFDD_SENS_INTERRUPT_STATUS
+                ; LDX #20000
+                ; JSL ILOOP_MS
                 LDA #0            ; Sellect the floppy disc drive 0
-                JSL IFDD_RECALIBRATE
+                ;JSL IFDD_RECALIBRATE
+                LDX #20000
+                JSL ILOOP_MS
                 ;JSL IFDD_SENS_INTERRUPT_STATUS
-                ;JSL IFDD_MOTOR_0_OFF
-                ;LDX #20000
-                ;JSL ILOOP_MS
-                ;JSL IFDD_MOTOR_0_ON
-                ;LDX #20000
-                ;JSL ILOOP_MS
+
+
+
+
+                ; JSL IFDD_SENS_INTERRUPT_STATUS
+                ; JSL IFDD_MOTOR_0_OFF
+                ; LDX #20000
+                ; JSL ILOOP_MS
+                ; JSL IFDD_MOTOR_0_ON
+                ; LDX #20000
+                ; JSL ILOOP_MS
+                ;BRA seek_loop_2
                 BRL seek_loop_2
 
 
