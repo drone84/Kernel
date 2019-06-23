@@ -210,6 +210,119 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
 ;                 JSL UART_PUTC
 ;                 ;;;;;;;;;;;;;;;;;;;;BRA Loop_MIDI
                 ;---------------------------------------------------------------
+                ; PPT test code START
+ppt_Main_loop
+                ; write the data in the PPT port
+                setas
+                setdbr`$AF1378
+                LDA #$55
+                STA $AF1378
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+
+                ;------------------
+                ; read the status bits
+                setas
+                setdbr`$AF1379
+                LDA $AF1379
+
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+
+                ;------------------
+                ; send the strop  signal
+                setas
+                setdbr`$AF137A
+                LDA $AF137A     ; get the register content
+                ORA #$01        ; set the strob bit
+                STA $AF137A
+                LDX #200
+                JSL ILOOP_MS
+                setas
+                setdbr`$AF137A
+                LDA $AF137A     ; get the register content
+                AND #$FE        ; clear the strob bit
+                STA $AF137A
+                LDX #2000
+                JSL ILOOP_MS
+
+
+                ;--------------
+                ;--------------
+                ;--------------
+
+                setas
+                setdbr`$AF1378
+                LDA #$AA
+                STA $AF1378
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+
+                ;------------------
+                ; read the status bits
+                setas
+                setdbr`$AF1379
+                LDA $AF1379
+
+                JSL UART_PUTHEX
+                LDA #$A
+                JSL UART_PUTC
+                LDA #$D
+                JSL UART_PUTC
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+
+                ;------------------
+                ; send the strop  signal
+                setas
+                setdbr`$AF137A
+                LDA $AF137A     ; get the register content
+                ;JSL UART_PUTHEX
+               ;LDA #$A
+                ;JSL UART_PUTC
+                ;LDA #$D
+                ;JSL UART_PUTC
+                setdbr`$AF137A
+                LDA $AF137A     ; get the register content
+                ORA #$01        ; set the strob bit
+                STA $AF137A
+                setdbr`$AF137A
+                LDA $AF137A     ; get the register content
+                ;JSL UART_PUTHEX
+                ;LDA #$A
+                ;JSL UART_PUTC
+                ;LDA #$D
+                ;JSL UART_PUTC
+                ;LDA #$A
+                ;JSL UART_PUTC
+                ;LDA #$D
+                ;JSL UART_PUTC
+                LDX #200
+                JSL ILOOP_MS
+                setas
+                setdbr`$AF137A
+                LDA $AF137A     ; get the register content
+                AND #$FE        ; clear the strob bit
+                STA $AF137A
+                LDX #2000
+                JSL ILOOP_MS
+
+                ;setdbr `minus_line
+                ;LDX #<>minus_line
+                ;JSL UART_PUTS
+
+                BRL ppt_Main_loop
+
+                ;---------------------------------------------------------------
                 ; Floppy test code START
                 setdbr `minus_line
                 LDX #<>minus_line
