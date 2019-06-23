@@ -20,6 +20,7 @@
 .include "Floppy.asm"
 .include "FAT12.asm"
 .include "MIDI_MPU_401_def.asm"
+.include "LPT.asm"
 .include "uart.s"
 ; C256 Foenix Kernel
 ; The Kernel is located in flash @ F8:0000 but not accessible by CPU
@@ -320,7 +321,72 @@ ppt_Main_loop
                 ;LDX #<>minus_line
                 ;JSL UART_PUTS
 
-                BRL ppt_Main_loop
+                ;;;;;BRL ppt_Main_loop
+
+                ;---------------------------------------------------------------
+                ; LPT ECP test code START
+                JSL IECP_SET_LPT_TO_ECP_MODE
+                JSL IECP_DEACTIVE_INTERRUPT
+                JSL IECP_SET_DATA_OUT
+
+
+ECP_Main_loop
+
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_HostClk_LINE_LOW
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_HostClk_LINE_HIGH
+                ;-------------
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_HostAck_LINE_LOW
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_HostAck_LINE_HIGH
+                ;-------------
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_nReverseRequest_LINE_LOW
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_nReverseRequest_LINE_HIGH
+                ;-------------
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_ECPMode_LINE_LOW
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+                JSL IECP_SET_ECPMode_LINE_HIGH
+
+
+                setas
+                setdbr`$AF1378
+                LDA #$AA
+                STA $AF1378
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+
+                setas
+                setdbr`$AF1378
+                LDA #$55
+                STA $AF1378
+                setas
+                LDX #2000
+                JSL ILOOP_MS
+
+                BRL ECP_Main_loop
+
 
                 ;---------------------------------------------------------------
                 ; Floppy test code START
