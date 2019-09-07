@@ -384,8 +384,33 @@ ECP_Main_loop
                 setas
                 LDX #2000
                 JSL ILOOP_MS
+                ;BRL ECP_Main_loop
+                LDA #$3 ; ECP mode
+                JSL IECP_SET_ECP_MODE
+                JSL IECP_DEACTIVE_INTERRUPT
+                JSL IECP_SET_DATA_OUT
+ECP_Main_loop_2
+                setas
+                LDX #40000
+                JSL ILOOP_MS
+                setas
+                setdbr`ECP_A_FIFO
+                LDA #$11
+                STA ECP_A_FIFO
+                LDA #$22
+                STA ECP_D_FIFO
+                LDA #$23
+                STA ECP_D_FIFO
+                ;setas
+                ;LDX #2000
+                ;JSL ILOOP_MS
+                ;setdbr`$AF1378
+                ;lLDA #$44
+                ;STA $AF1378
+                ;LDA #$88
+                ;STA $AF1378
 
-                BRL ECP_Main_loop
+                BRL ECP_Main_loop_2
 
 
                 ;---------------------------------------------------------------
