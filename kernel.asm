@@ -19,6 +19,7 @@
 .include "OPL2_Library.asm"   ; Library code to drive the OPL2 (right now, only in mono (both side from the same data))
 .include "Floppy.asm"
 .include "FAT12.asm"
+.include "FAT32.asm"
 .include "MIDI_MPU_401_def.asm"
 .include "LPT.asm"
 .include "uart.s"
@@ -142,7 +143,9 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 JSL UART_PUTC
                 ;LDX #<>ready_msg
                 ;JSL UART_PUTS
-
+                ;---------------------------------------------------------------
+                ; FAT
+                JSL FAT32_test
                 ;---------------------------------------------------------------
                 ; Joystic test code START
 
