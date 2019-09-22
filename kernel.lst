@@ -1,7 +1,7 @@
 
 ; 64tass Turbo Assembler Macro V1.53.1515 listing file
 ; 64tass --m65816 --long-address --flat -b -o kernel.bin --list kernel.lst kernel.asm
-; Sun Sep 22 12:36:16 2019
+; Sun Sep 22 20:05:49 2019
 
 ;Offset	;PC	;Hex		;Monitor	;Source
 
@@ -7993,565 +7993,773 @@
 >010026		00 00 00
 >010029		00 00				FAT32_File_System_Type          .word 0
 >01002b		00 00 00 00			FAT32_Sector_loaded_in_ram      .dword 0; updated by any function readding Sector from FDD like : IFAT32_READ_BOOT_SECTOR / IFAT32_COMPUT_ROOT_DIR_POS
->01002f		00 00 00 00			FAT32_Root_Base_Sector          .dword 0; hold the first sector containing the Root directory data
->010033		00 00 00 00			FAT32_Root_Sector_loaded_in_ram .dword 0  ; store the actual Folder sector loades in ram
->010037		00 00 00 00 00 00 00 00		FAT32_Root_entry_value          .fill 32,0 ; store the 32 byte of root entry
->01003f		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->01004f		00 00 00 00 00 00 00 00
->010057		00 00 00 00			FAT32_FAT_Base_Sector           .dword 0
->01005b		00 00 00 00			FAT32_FAT_Sector_loaded_in_ram  .dword 0  ; store the actual FAT sector loades in ram
->01005f		00 00 00 00			FAT32_FAT_Entry                 .dword 0
->010063		00 00 00 00			FAT32_FAT_Next_Entry            .dword 0  ; store the next 32 bit FAT entry associated to the FAT entry in 'FAT32_FAT_Entry'
->010067		00 00 00 00			FAT32_FAT_Linked_Entry           .dword 0
->01006b		00 00 00 00			MBR_Partition_address           .dword 0
-.01006f						FAT32_init
-.01006f		22 6e 01 01	jsl $01016e	              JSL IFAT32_READ_MBR           ; Init only
-.010073		22 f8 01 01	jsl $0101f8	              JSL IFAT32_READ_BOOT_SECTOR   ; Init only
-.010077		22 03 03 01	jsl $010303	              JSL IFAT32_COMPUT_FAT_POS   ; Init only
-.01007b		22 d6 02 01	jsl $0102d6	              JSL IFAT32_COMPUT_ROOT_DIR_POS   ; Init only
-.01007f		a9 00 00	lda #$0000	              LDA #0
-.010082		8f 2b 00 01	sta $01002b	              STA FAT32_Sector_loaded_in_ram
-.010086		8f 33 00 01	sta $010033	              STA FAT32_Root_Sector_loaded_in_ram
-.01008a		8f 5b 00 01	sta $01005b	              STA FAT32_FAT_Sector_loaded_in_ram
-.01008e		a9 00 00	lda #$0000	              LDA #0
-.010091		8f 2d 00 01	sta $01002d	              STA FAT32_Sector_loaded_in_ram+2
-.010095		8f 35 00 01	sta $010035	              STA FAT32_Root_Sector_loaded_in_ram+2
-.010099		8f 5d 00 01	sta $01005d	              STA FAT32_FAT_Sector_loaded_in_ram+2
-.01009d		22 5f 03 01	jsl $01035f	              JSL IFAT32_GET_ROOT_ENTRY
-.0100a1		a9 05 00	lda #$0005	              LDA #5
-.0100a4		8f 5f 00 01	sta $01005f	              STA FAT32_FAT_Entry
-.0100a8		a9 00 00	lda #$0000	              LDA #0
-.0100ab		8f 61 00 01	sta $010061	              STA FAT32_FAT_Entry+2
-.0100af		22 d5 03 01	jsl $0103d5	              JSL FAT32_IFAT_GET_FAT_ENTRY
-.0100b3		6b		rtl		              RTL
-.0100b4						FAT32_test
-.0100b4		22 5f 03 01	jsl $01035f	              JSL IFAT32_GET_ROOT_ENTRY
-.0100b8		a9 05 00	lda #$0005	              LDA #5
-.0100bb		8f 5f 00 01	sta $01005f	              STA FAT32_FAT_Entry
-.0100bf		a9 00 00	lda #$0000	              LDA #0
-.0100c2		8f 61 00 01	sta $010061	              STA FAT32_FAT_Entry+2
-.0100c6		22 d5 03 01	jsl $0103d5	              JSL FAT32_IFAT_GET_FAT_ENTRY
-.0100ca		a9 0d 00	lda #$000d	              LDA #$0D
-.0100cd		22 f9 09 19	jsl $1909f9	              JSL IPUTC
-.0100d1		22 d6 00 01	jsl $0100d6	              JSL FAT32_Open_File
-.0100d5		6b		rtl		              RTL
-.0100d6		a2 00 00	ldx #$0000	FAT32_Open_File   LDX #0 ; start by readding the first folder entry
-.0100d9						FAT32_Open_File_Read_Next_Folder_Entry
-.0100d9		8a		txa		                  TXA
-.0100da		22 5f 03 01	jsl $01035f	                  JSL IFAT32_GET_ROOT_ENTRY
-.0100de		e8		inx		                  INC X
-.0100df		af 37 00 01	lda $010037	                  LDA FAT32_Root_entry_value
-.0100e3		29 ff 00	and #$00ff	                  AND #$00FF
-.0100e6		c9 e5 00	cmp #$00e5	                  CMP #$E5 ; test if the entry is deleted
-.0100e9		f0 ee		beq $0100d9	                  BEQ FAT32_Open_File_Read_Next_Folder_Entry
-.0100eb		af 42 00 01	lda $010042	                  LDA FAT32_Root_entry_value +11
-.0100ef		29 ff 00	and #$00ff	                  AND #$00FF
-.0100f2		c9 0f 00	cmp #$000f	                  CMP #$0F ; test if its a long name entry
-.0100f5		f0 e2		beq $0100d9	                  BEQ FAT32_Open_File_Read_Next_Folder_Entry
-.0100f7		c9 20 00	cmp #$0020	                  CMP #$20 ; if different from 0x20 its nor a file name entry (need to confirm that)
-.0100fa		d0 dd		bne $0100d9	                  BNE FAT32_Open_File_Read_Next_Folder_Entry
-.0100fc		22 0e 01 01	jsl $01010e	                  JSL FAT32_Print_File_Name
-.010100		a9 0d 00	lda #$000d	                  LDA #$0D
-.010103		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
-.010107		8a		txa		                  TXA
-.010108		c9 20 00	cmp #$0020	                  CMP #32
-.01010b		d0 cc		bne $0100d9	                  BNE FAT32_Open_File_Read_Next_Folder_Entry;_temp
-.01010d		6b		rtl		                  RTL
-.01010e						FAT32_Print_File_Name
-.01010e		af 37 00 01	lda $010037	                LDA FAT32_Root_entry_value
-.010112		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.010116		af 38 00 01	lda $010038	                LDA FAT32_Root_entry_value +1
-.01011a		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.01011e		af 39 00 01	lda $010039	                LDA FAT32_Root_entry_value +2
-.010122		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.010126		af 3a 00 01	lda $01003a	                LDA FAT32_Root_entry_value +3
-.01012a		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.01012e		af 3b 00 01	lda $01003b	                LDA FAT32_Root_entry_value +4
-.010132		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.010136		af 3c 00 01	lda $01003c	                LDA FAT32_Root_entry_value +5
-.01013a		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.01013e		af 3d 00 01	lda $01003d	                LDA FAT32_Root_entry_value +6
-.010142		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.010146		af 3e 00 01	lda $01003e	                LDA FAT32_Root_entry_value +7
-.01014a		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.01014e		a9 2e 00	lda #$002e	                LDA #'.'
-.010151		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.010155		af 3f 00 01	lda $01003f	                LDA FAT32_Root_entry_value +8
-.010159		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.01015d		af 40 00 01	lda $010040	                LDA FAT32_Root_entry_value +9
-.010161		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.010165		af 41 00 01	lda $010041	                LDA FAT32_Root_entry_value +10
-.010169		22 f9 09 19	jsl $1909f9	                JSL IPUTC
-.01016d		6b		rtl		                RTL
-.01016e						IFAT32_READ_MBR
-.01016e		c2 20		rep #$20	                REP #$20        ; set A long
-.010170		a9 01 00	lda #$0001	                  LDA #`FAT32_DATA_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
-.010173		48		pha		                  PHA
-.010174		a9 00 08	lda #$0800	                  LDA #<>FAT32_DATA_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
-.010177		48		pha		                  PHA
-.010178		a9 00 00	lda #$0000	                  LDA #0 ; read sector 0 (where the MBR sector is stored)
-.01017b		22 37 05 01	jsl $010537	                  JSL IHDD_READ
-.01017f		fa		plx		                  PLX
-.010180		fa		plx		                  PLX
-.010181		a2 be 01	ldx #$01be	                  LDX #MBR_Partition_Entry
-.010184						READ_MBR_Scan
-.010184		bf 08 08 01	lda $010808,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X+8
-.010188		c9 00 00	cmp #$0000	                  CMP #0
-.01018b		f0 03		beq $010190	                  BEQ READ_MBR_Partition_Entry_LSB_Not_Null
-.01018d		a0 01 00	ldy #$0001	                  LDY #1
-.010190						READ_MBR_Partition_Entry_LSB_Not_Null
-.010190		8f 6b 00 01	sta $01006b	                  STA MBR_Partition_address
-.010194		bf 0a 08 01	lda $01080a,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X+8+2
-.010198		c9 00 00	cmp #$0000	                  CMP #0
-.01019b		f0 03		beq $0101a0	                  BEQ READ_MBR_Partition_Entry_MSB_Not_Null
-.01019d		a0 01 00	ldy #$0001	                  LDY #1
-.0101a0						READ_MBR_Partition_Entry_MSB_Not_Null
-.0101a0		8f 6d 00 01	sta $01006d	                  STA MBR_Partition_address+2
-.0101a4		c0 01 00	cpy #$0001	                  CPY #1
-.0101a7		f0 0c		beq $0101b5	                  BEQ READ_MBR_Partition_valid_address
-.0101a9		e0 fe 01	cpx #$01fe	                  CPX #$1FE
-.0101ac		f0 46		beq $0101f4	                  BEQ READ_MBR_End_Scan_no_partition
-.0101ae		8a		txa		                  TXA
-.0101af		69 10 00	adc #$0010	                  ADC #MBR_Partition_Entry_size
-.0101b2		aa		tax		                  TAX
-.0101b3		80 cf		bra $010184	                  BRA READ_MBR_Scan
-.0101b5						READ_MBR_Partition_valid_address
-.0101b5		a2 25 04	ldx #$0425	                  LDX #<>Partition_ofset_text
-.0101b8		a9 02 00	lda #$0002	                  LDA #`Partition_ofset_text
-.0101bb		22 e8 93 01	jsl $0193e8	                  JSL IPRINT_ABS       ; print the first line
-.0101bf		a9 30 00	lda #$0030	                  LDA #'0'
-.0101c2		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
-.0101c6		a9 78 00	lda #$0078	                  LDA #'x'
-.0101c9		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
-.0101cd		af 6e 00 01	lda $01006e	                  LDA MBR_Partition_address +3
-.0101d1		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
-.0101d5		af 6d 00 01	lda $01006d	                  LDA MBR_Partition_address +2
-.0101d9		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
-.0101dd		af 6c 00 01	lda $01006c	                  LDA MBR_Partition_address +1
-.0101e1		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
-.0101e5		af 6b 00 01	lda $01006b	                  LDA MBR_Partition_address
-.0101e9		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
-.0101ed		a9 0d 00	lda #$000d	                  LDA #$0D
-.0101f0		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
-.0101f4						READ_MBR_End_Scan_no_partition
-.0101f4		a9 ff ff	lda #$ffff	                  LDA #-1
-.0101f7						READ_MBR_End
-.0101f7		6b		rtl		                  RTL
-.0101f8						IFAT32_READ_BOOT_SECTOR
-.0101f8		c2 30		rep #$30	                REP #$30        ; set A&X long
-.0101fa		a9 01 00	lda #$0001	                  LDA #`FAT32_DATA_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
-.0101fd		48		pha		                  PHA
-.0101fe		a9 00 08	lda #$0800	                  LDA #<>FAT32_DATA_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
-.010201		48		pha		                  PHA
-.010202		af 6d 00 01	lda $01006d	                  LDA MBR_Partition_address+2 ; dont use X value for now IHDD_READ is a dummy function unlit I ger the real HDD hardware driver
-.010206		aa		tax		                  TAX
-.010207		af 6b 00 01	lda $01006b	                  LDA MBR_Partition_address
-.01020b		22 37 05 01	jsl $010537	                  JSL IHDD_READ
-.01020f		fa		plx		                  PLX
-.010210		fa		plx		                  PLX;
-.010211		8f 2b 00 01	sta $01002b	                  STA FAT32_Sector_loaded_in_ram
-.010215		a2 0b 00	ldx #$000b	                  LDX #$B ;11
-.010218		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.01021c		8f 00 00 01	sta $010000	                  STA FAT32_Byte_Per_Sector
-.010220		a2 0d 00	ldx #$000d	                  LDX #$0D ;13
-.010223		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.010227		29 ff 00	and #$00ff	                  AND #$FF
-.01022a		8f 02 00 01	sta $010002	                  STA FAT32_Sector_Per_Cluster
-.01022e		a2 0e 00	ldx #$000e	                  LDX #$0E ;14
-.010231		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.010235		8f 04 00 01	sta $010004	                  STA FAT32_Nb_Of_reserved_Cluster
-.010239		a2 10 00	ldx #$0010	                  LDX #$10 ;16
-.01023c		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.010240		29 ff 00	and #$00ff	                  AND #$FF
-.010243		8f 06 00 01	sta $010006	                  STA FAT32_Nb_Of_FAT
-.010247		a2 18 00	ldx #$0018	                  LDX #24 ;
-.01024a		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.01024e		8f 10 00 01	sta $010010	                  STA FAT32_Sector_per_Track
-.010252		a2 1a 00	ldx #$001a	                  LDX #26 ;
-.010255		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.010259		8f 12 00 01	sta $010012	                  STA FAT32_Nb_of_Head
-.01025d		a2 24 00	ldx #$0024	                  LDX #$24 ;36 ;
-.010260		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.010264		8f 0c 00 01	sta $01000c	                  STA FAT32_Sector_per_Fat
-.010268		a2 26 00	ldx #$0026	                  LDX #$26 ;36 ;
-.01026b		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
-.01026f		8f 0e 00 01	sta $01000e	                  STA FAT32_Sector_per_Fat+2
-.010273		af 00 00 01	lda $010000	                  LDA FAT32_Byte_Per_Sector
-.010277		c9 00 02	cmp #$0200	                  CMP #512
-.01027a		d0 29		bne $0102a5	                  BNE FAT32_ERROR_BLOCK_SEIZE
-.01027c		af 02 00 01	lda $010002	                  LDA FAT32_Sector_Per_Cluster
-.010280		c9 01 00	cmp #$0001	                  CMP #1
-.010283		d0 25		bne $0102aa	                  BNE FAT32_ERROR_SECTOR_PER_CLUSTER
-.010285		af 04 00 01	lda $010004	                  LDA FAT32_Nb_Of_reserved_Cluster
-.010289		c9 01 00	cmp #$0001	                  CMP #1
-.01028c		90 21		bcc $0102af	                  BCC FAT32_ERROR_RESERVED_SECTOR
-.01028e		af 06 00 01	lda $010006	                  LDA FAT32_Nb_Of_FAT
-.010292		c9 01 00	cmp #$0001	                  CMP #1
-.010295		90 1d		bcc $0102b4	                  BCC FAT32_ERROR_NB_FAT
-.010297		af 0c 00 01	lda $01000c	                  LDA FAT32_Sector_per_Fat
-.01029b		c9 00 00	cmp #$0000	                  CMP #0
-.01029e		f0 23		beq $0102c3	                  BEQ FAT32_ERROR_SECTOR_PER_FAT
-.0102a0		a9 01 00	lda #$0001	                  LDA #1
-.0102a3		80 30		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102a5		a9 ff ff	lda #$ffff	FAT32_ERROR_BLOCK_SEIZE LDA #-1
-.0102a8		80 2b		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102aa						FAT32_ERROR_SECTOR_PER_CLUSTER
-.0102aa		a9 fe ff	lda #$fffe	                  LDA #-2
-.0102ad		80 26		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102af						FAT32_ERROR_RESERVED_SECTOR
-.0102af		a9 fd ff	lda #$fffd	                  LDA #-3
-.0102b2		80 21		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102b4		a9 fc ff	lda #$fffc	FAT32_ERROR_NB_FAT      LDA #-4
-.0102b7		80 1c		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102b9						FAT32_ERROR_NB_ROOT_ENTRY
-.0102b9		a9 fb ff	lda #$fffb	                  LDA #-5
-.0102bc		80 17		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102be						FAT32_ERROR_NB_TOTAL_SECTOR_COUNT
-.0102be		a9 fa ff	lda #$fffa	                  LDA #-6
-.0102c1		80 12		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102c3						FAT32_ERROR_SECTOR_PER_FAT
-.0102c3		a9 f9 ff	lda #$fff9	                  LDA #-7
-.0102c6		80 0d		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102c8						FAT32_ERROR_SECTOR_PER_TRACK
-.0102c8		a9 f8 ff	lda #$fff8	                  LDA #-8
-.0102cb		80 08		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102cd						FAT32_ERROR_NB_HEAD_NULL
-.0102cd		a9 f7 ff	lda #$fff7	                  LDA #-9
-.0102d0		80 03		bra $0102d5	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
-.0102d2						FAT32_ERROR_BOOT_SIGNATURE
-.0102d2		a9 f6 ff	lda #$fff6	                  LDA #-10
-.0102d5						RETURN_IFAT32_READ_BOOT_SECTOR
-.0102d5		6b		rtl		                  RTL
-.0102d6						IFAT32_COMPUT_ROOT_DIR_POS
-.0102d6		c2 30		rep #$30	                REP #$30        ; set A&X long
-.0102d8		af 06 00 01	lda $010006	                  LDA FAT32_Nb_Of_FAT;
-.0102dc		aa		tax		                  TAX
-.0102dd		af 0c 00 01	lda $01000c	                  LDA FAT32_Sector_per_Fat
-.0102e1		ca		dex		FAT32_ADD_ONE_FAT       DEC X
-.0102e2		e0 00 00	cpx #$0000	                  CPX #0
-.0102e5		f0 07		beq $0102ee	                  BEQ FAT32_FDD_END_LOOP_FAT_SECTOR_USAGE
-.0102e7		18		clc		                  CLC
-.0102e8		6f 0c 00 01	adc $01000c	                  ADC FAT32_Sector_per_Fat
-.0102ec		80 f3		bra $0102e1	                  BRA FAT32_ADD_ONE_FAT
-.0102ee						FAT32_FDD_END_LOOP_FAT_SECTOR_USAGE
-.0102ee		18		clc		                  CLC
-.0102ef		6f 04 00 01	adc $010004	                  ADC FAT32_Nb_Of_reserved_Cluster
-.0102f3		18		clc		                  CLC
-.0102f4		6f 6b 00 01	adc $01006b	                  ADC MBR_Partition_address; at this point we have the sector where the Root directory is starting
-.0102f8		8f 2f 00 01	sta $01002f	                  STA FAT32_Root_Base_Sector
-.0102fc		6b		rtl		                  RTL
-.0102fd						IFAT32_GET_ROOT_FIRST_ENTRY
-.0102fd		c2 30		rep #$30	                REP #$30        ; set A&X long
-.0102ff		6b		rtl		                  RTL
-.010300						IFAT32_GET_ROOT_NEXT_ENTRY
-.010300		c2 30		rep #$30	                REP #$30        ; set A&X long
-.010302		6b		rtl		                  RTL
-.010303						IFAT32_COMPUT_FAT_POS
-.010303		c2 30		rep #$30	                REP #$30        ; set A&X long
-.010305		af 04 00 01	lda $010004	                  LDA FAT32_Nb_Of_reserved_Cluster
-.010309		18		clc		                  CLC
-.01030a		6f 6b 00 01	adc $01006b	                  ADC MBR_Partition_address;
-.01030e		8f 57 00 01	sta $010057	                  STA FAT32_FAT_Base_Sector
-.010312		6b		rtl		                  RTL
-.010313						IFAT32_READ_LIKED_FAT_ENTRY
-.010313		da		phx		                  PHX
-.010314						  IFAT32_READ_LIKED_FAT_ENTRY___READ_NEXT_FAT
-.010314		22 d5 03 01	jsl $0103d5	                  JSL FAT32_IFAT_GET_FAT_ENTRY
-.010318		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry +2 ; test for EOC (End Of Cluster)
-.01031c		29 ff 0f	and #$0fff	                  AND #$0FFF
-.01031f		c9 ff 0f	cmp #$0fff	                  CMP #$0FFF
-.010322		f0 1d		beq $010341	                  BEQ IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_VALID
-.010324		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry +2 ; test for EOC (End Of Cluster)
-.010328		29 f0 ff	and #$fff0	                  AND #$FFF0
-.01032b		c9 f0 ff	cmp #$fff0	                  CMP #$FFF0
-.01032e		f0 11		beq $010341	                  BEQ IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_VALID
-.010330		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry +2 ; test for EOC (End Of Cluster)
-.010334		29 0f 00	and #$000f	                  AND #$000F
-.010337		c9 08 00	cmp #$0008	                  CMP #8
-.01033a		30 05		bmi $010341	                  BMI IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_VALID
-.01033c		a9 ff ff	lda #$ffff	                  LDA #-1 ; end of the file
-.01033f		80 1d		bra $01035e	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___EOC
-.010341						IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_VALID
-.010341		af 67 00 01	lda $010067	                  LDA FAT32_FAT_Linked_Entry
-.010345		3a		dec a		                  DEC A
-.010346		30 06		bmi $01034e	                  BMI IFAT32_READ_LIKED_FAT_ENTRY___UNDERFLOW
-.010348		8f 5f 00 01	sta $01005f	                  STA FAT32_FAT_Entry ; update the low part the the fat entry we want to read
-.01034c		80 c6		bra $010314	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___READ_NEXT_FAT
-.01034e						IFAT32_READ_LIKED_FAT_ENTRY___UNDERFLOW
-.01034e		af 69 00 01	lda $010069	                  LDA FAT32_FAT_Linked_Entry+2
-.010352		3a		dec a		                  DEC A
-.010353		30 06		bmi $01035b	                  BMI IFAT32_READ_LIKED_FAT_ENTRY___WENT_THRW_ALL_FAT_LINKED
-.010355		8f 61 00 01	sta $010061	                  STA FAT32_FAT_Entry+2
-.010359		80 b9		bra $010314	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___READ_NEXT_FAT
-.01035b						IFAT32_READ_LIKED_FAT_ENTRY___WENT_THRW_ALL_FAT_LINKED
-.01035b		a9 01 00	lda #$0001	                  LDA #1
-.01035e						IFAT32_READ_LIKED_FAT_ENTRY___EOC
-.01035e		fa		plx		                  PLX
-.01035f						IFAT32_GET_ROOT_ENTRY
-.01035f		c2 30		rep #$30	                REP #$30        ; set A&X long
-.010361		da		phx		                  PHX
-.010362		48		pha		                  PHA ; Save the root entry index we want to read
-.010363		a2 00 00	ldx #$0000	                  LDX #0 ; compute in witch sector the desired root entry is, 16 entry per sector so we just need to divit the sector size by 16
-.010366						FAT32_KEEP_SHIFT_ROOT_ENTRY_INDEX
-.010366		4a		lsr a		                  LSR
-.010367		e8		inx		                  INC X
-.010368		e0 04 00	cpx #$0004	                  CPX #4 ; divide by 16
-.01036b		d0 f9		bne $010366	                  BNE FAT32_KEEP_SHIFT_ROOT_ENTRY_INDEX
-.01036d		c9 00 00	cmp #$0000	                  CMP #0
-.010370		f0 25		beq $010397	                  BEQ IFAT32_GET_ROOT_ENTRY__Load_first_sector
-.010372		af 2f 00 01	lda $01002f	                  LDA FAT32_Root_Base_Sector
-.010376		8f 5f 00 01	sta $01005f	                  STA FAT32_FAT_Entry
-.01037a		af 31 00 01	lda $010031	                  LDA FAT32_Root_Base_Sector +2
-.01037e		8f 61 00 01	sta $010061	                  STA FAT32_FAT_Entry + 2
-.010382		8a		txa		                  TXA
-.010383		8f 67 00 01	sta $010067	                  STA FAT32_FAT_Linked_Entry
-.010387		a9 00 00	lda #$0000	                  LDA #0
-.01038a		8f 69 00 01	sta $010069	                  STA FAT32_FAT_Linked_Entry+2
-.01038e		22 13 03 01	jsl $010313	                  JSL IFAT32_READ_LIKED_FAT_ENTRY
-.010392		c9 ff ff	cmp #$ffff	                  CMP #-1
-.010395		f0 3b		beq $0103d2	                  BEQ IFAT32_GET_ROOT_ENTRY__ERROR_NO_MORE_FAT_ENTRY
-.010397						IFAT32_GET_ROOT_ENTRY__Load_first_sector
-.010397		18		clc		                  CLC ; reset the carry flag potencialy set by CPX
-.010398		6f 2f 00 01	adc $01002f	                  ADC FAT32_Root_Base_Sector ; add the relative sector position of the rrot entry to the start root entry position shoud be 19 (0 based index)
-.01039c		cf 33 00 01	cmp $010033	                  CMP FAT32_Root_Sector_loaded_in_ram
-.0103a0		f0 16		beq $0103b8	                  BEQ FAT32_FDD_SECTOR_ALREADDY_LOADDES_IN_RAM
-.0103a2		8f 33 00 01	sta $010033	                  STA FAT32_Root_Sector_loaded_in_ram ; save the new sector loaded
-.0103a6		a9 01 00	lda #$0001	                  LDA #`FAT32_FOLDER_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
-.0103a9		48		pha		                  PHA
-.0103aa		a9 00 0c	lda #$0c00	                  LDA #<>FAT32_FOLDER_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
-.0103ad		48		pha		                  PHA
-.0103ae		af 33 00 01	lda $010033	                  LDA FAT32_Root_Sector_loaded_in_ram ; Get the ROOT directory sector saved rearlyer
-.0103b2		22 37 05 01	jsl $010537	                  JSL IHDD_READ
-.0103b6		fa		plx		                  PLX
-.0103b7		fa		plx		                  PLX
-.0103b8						FAT32_FDD_SECTOR_ALREADDY_LOADDES_IN_RAM
-.0103b8		68		pla		                  PLA ; GET the root entry FDD_INDEX
-.0103b9		29 0f 00	and #$000f	                  AND #$0F ; get only the 4 first byte to get the 16 value ofset in the root entry sector loades in ram (16 entry per sector)
-.0103bc		0a		asl a		                  ASL
-.0103bd		0a		asl a		                  ASL
-.0103be		0a		asl a		                  ASL
-.0103bf		0a		asl a		                  ASL
-.0103c0		0a		asl a		                  ASL ; now A contain the ofset to read the root entry from
-.0103c1		18		clc		                  CLC
-.0103c2		69 00 0c	adc #$0c00	                  ADC #<>FAT32_FOLDER_ADDRESS_BUFFER_512
-.0103c5		aa		tax		                  TAX
-.0103c6		a9 37 00	lda #$0037	                  LDA #<>FAT32_Root_entry_value
-.0103c9		a8		tay		                  TAY
-.0103ca		a9 1f 00	lda #$001f	                  LDA #31
-.0103cd		54 01 01	mvn $01,$01	                  MVN `FAT32_Root_entry_value, `FAT32_FOLDER_ADDRESS_BUFFER_512
-.0103d0		80 01		bra $0103d3	                  BRA IFAT32_GET_ROOT_ENTRY___EXIT_OK
-.0103d2						IFAT32_GET_ROOT_ENTRY__ERROR_NO_MORE_FAT_ENTRY
-.0103d2		fa		plx		                  PLX
-.0103d3						IFAT32_GET_ROOT_ENTRY___EXIT_OK
-.0103d3		fa		plx		                  PLX
-.0103d4		6b		rtl		                  RTL
-.0103d5						FAT32_IFAT_GET_FAT_ENTRY
-.0103d5		48		pha		                  PHA
-.0103d6		da		phx		                  PHX
-.0103d7		5a		phy		                  PHY
-.0103d8		af 61 00 01	lda $010061	                  LDA FAT32_FAT_Entry+2
-.0103dc		c9 00 00	cmp #$0000	                  CMP #0
-.0103df		d0 13		bne $0103f4	                  BNE FAT32_FAT_ENTRY_FIND_THE_CLUSTER ; the FAT entry is definitly not in the first FAT cluster
-.0103e1		af 5f 00 01	lda $01005f	                  LDA FAT32_FAT_Entry
-.0103e5		4a		lsr a		                  LSR A
-.0103e6		4a		lsr a		                  LSR A
-.0103e7		4a		lsr a		                  LSR A
-.0103e8		4a		lsr a		                  LSR A
-.0103e9		8f 63 00 01	sta $010063	                  STA FAT32_FAT_Next_Entry
-.0103ed		c9 00 00	cmp #$0000	                  CMP #0
-.0103f0		d0 02		bne $0103f4	                  BNE FAT32_FAT_ENTRY_FIND_THE_CLUSTER
-.0103f2		80 36		bra $01042a	                  BRA FAT32_ENTRY_SECTOR_LOCATION_FIND ; if this part of the code i riched, its mean that the FAT entry requested is with in the first FAT clustrer (entry smaller than 16)
-.0103f4						FAT32_FAT_ENTRY_FIND_THE_CLUSTER
-.0103f4		af 61 00 01	lda $010061	                  LDA FAT32_FAT_Entry+2
-.0103f8		4a		lsr a		                  LSR A
-.0103f9		4a		lsr a		                  LSR A
-.0103fa		4a		lsr a		                  LSR A
-.0103fb		4a		lsr a		                  LSR A ; comput the high part divided by 16
-.0103fc		8f 65 00 01	sta $010065	                  STA FAT32_FAT_Next_Entry+2 ; use FAT32_FAT_Next_Entry as a temporary variable
-.010400		af 61 00 01	lda $010061	                  LDA FAT32_FAT_Entry+2 ;extract the 4 bits of the HIGHT part of FAT32_FAT_Entry to casrry them in the LOW part
-.010404		29 0f 00	and #$000f	                  AND #$F
-.010407		0a		asl a		                  ASL A
-.010408		0a		asl a		                  ASL A
-.010409		0a		asl a		                  ASL A
-.01040a		0a		asl a		                  ASL A
-.01040b		0a		asl a		                  ASL A
-.01040c		0a		asl a		                  ASL A
-.01040d		0a		asl a		                  ASL A
-.01040e		0a		asl a		                  ASL A
-.01040f		0a		asl a		                  ASL A
-.010410		0a		asl a		                  ASL A
-.010411		0a		asl a		                  ASL A
-.010412		0a		asl a		                  ASL A ; get the 4 bit in the right position to be added to the LOW part
-.010413		8f 63 00 01	sta $010063	                  STA FAT32_FAT_Next_Entry
-.010417		af 5f 00 01	lda $01005f	                  LDA FAT32_FAT_Entry
-.01041b		4a		lsr a		                  LSR A
-.01041c		4a		lsr a		                  LSR A
-.01041d		4a		lsr a		                  LSR A
-.01041e		4a		lsr a		                  LSR A ; divide the high part of the FAT entry requested by 16  because there is 16 FAt entry per sector
-.01041f		29 ff 0f	and #$0fff	                  AND #$0FFF
-.010422		0f 63 00 01	ora $010063	                  ORA FAT32_FAT_Next_Entry
-.010426		8f 63 00 01	sta $010063	                  STA FAT32_FAT_Next_Entry ; Now contain the 32 bit FAT Cluster to load
-.01042a						FAT32_ENTRY_SECTOR_LOCATION_FIND
-.01042a		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Next_Entry
-.01042e		18		clc		                  CLC
-.01042f		6f 57 00 01	adc $010057	                  ADC FAT32_FAT_Base_Sector
-.010433		cf 5b 00 01	cmp $01005b	                  CMP FAT32_FAT_Sector_loaded_in_ram
-.010437		f0 16		beq $01044f	                  BEQ FAT32_COMPUTED_OFSET_IN_CLUSTER ; dont need to load the fat sector because it's alreaddy loaded
-.010439		8f 5b 00 01	sta $01005b	                  STA FAT32_FAT_Sector_loaded_in_ram  ; update the cluster value
-.01043d		a9 01 00	lda #$0001	                  LDA #`FAT32_FAT_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
-.010440		48		pha		                  PHA
-.010441		a9 00 0a	lda #$0a00	                  LDA #<>FAT32_FAT_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
-.010444		48		pha		                  PHA
-.010445		af 5b 00 01	lda $01005b	                  LDA FAT32_FAT_Sector_loaded_in_ram ; read the ROOT directory sector saved at the begining of the function
-.010449		22 37 05 01	jsl $010537	                  JSL IHDD_READ
-.01044d		fa		plx		                  PLX
-.01044e		fa		plx		                  PLX
-.01044f						FAT32_COMPUTED_OFSET_IN_CLUSTER
-.01044f		af 5f 00 01	lda $01005f	                  LDA FAT32_FAT_Entry
-.010453		29 0f 00	and #$000f	                  AND #$0F ; get only the 7 first byte to get the ofset in the curent FAT cluster loades
-.010456		0a		asl a		                  ASL
-.010457		0a		asl a		                  ASL ; *4 to point to the FAT entry 32 byte
+>01002f		00 00				FAT32_Root_Fat_Sector_offset    .word 0; hold the ofset in cluster of the first root dirrectory in the fat
+>010031		00 00 00 00			FAT32_Root_Base_Sector          .dword 0; hold the first sector containing the Root directory data
+>010035		00 00 00 00			FAT32_Root_Sector_loaded_in_ram .dword 0  ; store the actual Folder sector loades in ram
+>010039		00 00 00 00 00 00 00 00		FAT32_Root_entry_value          .fill 32,0 ; store the 32 byte of root entry
+>010041		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>010051		00 00 00 00 00 00 00 00
+>010059		00 00 00 00			FAT32_FAT_Base_Sector           .dword 0
+>01005d		00 00 00 00			FAT32_FAT_Sector_loaded_in_ram  .dword 0  ; store the actual FAT sector loades in ram
+>010061		00 00 00 00			FAT32_FAT_Entry                 .dword 0
+>010065		00 00 00 00			FAT32_FAT_Next_Entry            .dword 0  ; store the next 32 bit FAT entry associated to the FAT entry in 'FAT32_FAT_Entry'
+>010069		00 00 00 00			FAT32_FAT_Linked_Entry          .dword 0
+>01006d		00 00 00 00			FAT32_Data_Base_Sector          .dword 0  ; contain the sector index of the first data in the FAT volume (that include the reserved cluster after the fat) => used to convert from cluster count to fat index
+>010071		00 00 00 00			MBR_Partition_address           .dword 0
+>010075		00 00 00 00			FAT32_Curent_File_base_cluster  .dword 0 ; Hold the first cluster from the FAT perspective => real cluster  = FAT32_Curent_File_base_cluster + FAT32_Data_Base_Sector
+>010079		00 00 00 00			FAT32_Curent_File_curent_cluster  .dword 0
+>01007d		00 00 00 00			FAT32_Sector_to_read            .dword 0
+>010081		54 45 58 54 5f 54 7e 31		file_to_load_f32    .text "TEXT_T~1TXT"
+>010089		54 58 54
+.01008c						FAT32_init
+.01008c		22 bc 02 01	jsl $0102bc	              JSL IFAT32_READ_MBR             ; Init only
+.010090		22 46 03 01	jsl $010346	              JSL IFAT32_READ_BOOT_SECTOR     ; Init only
+.010094		22 99 04 01	jsl $010499	              JSL IFAT32_COMPUT_FAT_POS       ; Init only
+.010098		22 40 04 01	jsl $010440	              JSL IFAT32_COMPUT_DATA_POS      ; Init only
+.01009c		22 67 04 01	jsl $010467	              JSL IFAT32_COMPUT_ROOT_DIR_POS  ; Init only
+.0100a0		a9 00 00	lda #$0000	              LDA #0
+.0100a3		8f 2b 00 01	sta $01002b	              STA FAT32_Sector_loaded_in_ram
+.0100a7		8f 35 00 01	sta $010035	              STA FAT32_Root_Sector_loaded_in_ram
+.0100ab		8f 5d 00 01	sta $01005d	              STA FAT32_FAT_Sector_loaded_in_ram
+.0100af		a9 00 00	lda #$0000	              LDA #0
+.0100b2		8f 2d 00 01	sta $01002d	              STA FAT32_Sector_loaded_in_ram+2
+.0100b6		8f 37 00 01	sta $010037	              STA FAT32_Root_Sector_loaded_in_ram+2
+.0100ba		8f 5f 00 01	sta $01005f	              STA FAT32_FAT_Sector_loaded_in_ram+2
+.0100be		22 1c 05 01	jsl $01051c	              JSL IFAT32_GET_ROOT_ENTRY
+.0100c2		a9 05 00	lda #$0005	              LDA #5
+.0100c5		8f 61 00 01	sta $010061	              STA FAT32_FAT_Entry
+.0100c9		a9 00 00	lda #$0000	              LDA #0
+.0100cc		8f 63 00 01	sta $010063	              STA FAT32_FAT_Entry+2
+.0100d0		22 91 05 01	jsl $010591	              JSL FAT32_IFAT_GET_FAT_ENTRY
+.0100d4		6b		rtl		              RTL
+.0100d5						FAT32_test
+.0100d5		22 1c 05 01	jsl $01051c	              JSL IFAT32_GET_ROOT_ENTRY
+.0100d9		a9 05 00	lda #$0005	              LDA #5
+.0100dc		8f 61 00 01	sta $010061	              STA FAT32_FAT_Entry
+.0100e0		a9 00 00	lda #$0000	              LDA #0
+.0100e3		8f 63 00 01	sta $010063	              STA FAT32_FAT_Entry+2
+.0100e7		22 91 05 01	jsl $010591	              JSL FAT32_IFAT_GET_FAT_ENTRY
+.0100eb		a9 0d 00	lda #$000d	              LDA #$0D
+.0100ee		22 f9 09 19	jsl $1909f9	              JSL IPUTC
+.0100f2		22 3f 01 01	jsl $01013f	              JSL FAT32_LS_CMD
+.0100f6		a9 0d 00	lda #$000d	              LDA #$0D
+.0100f9		22 f9 09 19	jsl $1909f9	              JSL IPUTC
+.0100fd		22 78 01 01	jsl $010178	              JSL FAT32_Open_File
+.010101		c9 01 00	cmp #$0001	              CMP #1
+.010104		d0 08		bne $01010e	              BNE FAT32_test__Faill_To_Find_file
+.010106		22 f2 01 01	jsl $0101f2	              JSL FAT32_Read_File
+.01010a		22 0f 01 01	jsl $01010f	              JSL FAT32_Print_Cluster
+.01010e						FAT32_test__Faill_To_Find_file
+.01010e		6b		rtl		              RTL
+.01010f						FAT32_Print_Cluster
+.01010f		a9 0d 00	lda #$000d	              LDA #$0D
+.010112		22 f9 09 19	jsl $1909f9	              JSL IPUTC
+.010116		a2 00 00	ldx #$0000	              LDX #0
+.010119						FAT32_Print_Cluster_line
+.010119		a0 00 00	ldy #$0000	              LDY #0
+.01011c						FAT32_Print_Cluster_Byte
+.01011c		bf 00 08 01	lda $010800,x	              LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.010120		22 0f 94 01	jsl $01940f	              JSL IPRINT_HEX
+.010124		a9 20 00	lda #$0020	              LDA #$20
+.010127		22 f9 09 19	jsl $1909f9	              JSL IPUTC
+.01012b		c8		iny		              INY
+.01012c		c0 10 00	cpy #$0010	              CPY #16
+.01012f		d0 eb		bne $01011c	              BNE FAT32_Print_Cluster_Byte
+.010131		a9 0d 00	lda #$000d	              LDA #$0D
+.010134		22 f9 09 19	jsl $1909f9	              JSL IPUTC
+.010138		e8		inx		              INX
+.010139		e0 00 02	cpx #$0200	              CPX #512
+.01013c		d0 db		bne $010119	              BNE FAT32_Print_Cluster_line
+.01013e		6b		rtl		              RTL
+.01013f		a2 00 00	ldx #$0000	FAT32_LS_CMD   LDX #0 ; start by readding the first folder entry
+.010142						FAT32_LS_CMD__Read_Next_Folder_Entry
+.010142		8a		txa		                  TXA
+.010143		c9 20 00	cmp #$0020	                  CMP #32
+.010146		f0 2f		beq $010177	                  BEQ FAT32_LS_CMD__EXIT
+.010148		22 1c 05 01	jsl $01051c	                  JSL IFAT32_GET_ROOT_ENTRY
+.01014c		e8		inx		                  INC X
+.01014d		af 39 00 01	lda $010039	                  LDA FAT32_Root_entry_value
+.010151		29 ff 00	and #$00ff	                  AND #$00FF
+.010154		c9 e5 00	cmp #$00e5	                  CMP #$E5 ; test if the entry is deleted
+.010157		f0 e9		beq $010142	                  BEQ FAT32_LS_CMD__Read_Next_Folder_Entry
+.010159		af 44 00 01	lda $010044	                  LDA FAT32_Root_entry_value +11
+.01015d		29 ff 00	and #$00ff	                  AND #$00FF
+.010160		c9 0f 00	cmp #$000f	                  CMP #$0F ; test if its a long name entry
+.010163		f0 dd		beq $010142	                  BEQ FAT32_LS_CMD__Read_Next_Folder_Entry
+.010165		c9 20 00	cmp #$0020	                  CMP #$20 ; if different from 0x20 its nor a file name entry (need to confirm that)
+.010168		d0 d8		bne $010142	                  BNE FAT32_LS_CMD__Read_Next_Folder_Entry
+.01016a		22 5c 02 01	jsl $01025c	                  JSL FAT32_Print_File_Name
+.01016e		a9 0d 00	lda #$000d	                  LDA #$0D
+.010171		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
+.010175		80 cb		bra $010142	                  BRA FAT32_LS_CMD__Read_Next_Folder_Entry
+.010177						FAT32_LS_CMD__EXIT
+.010177		6b		rtl		                  RTL
+.010178		a2 00 00	ldx #$0000	FAT32_Open_File   LDX #0 ; start by readding the first folder entry
+.01017b						FAT32_Open_File_Read_Next_Folder_Entry
+.01017b		8a		txa		                  TXA
+.01017c		c9 20 00	cmp #$0020	                  CMP #32
+.01017f		f0 70		beq $0101f1	                  BEQ FAT32_Open_File__EXIT
+.010181		22 1c 05 01	jsl $01051c	                  JSL IFAT32_GET_ROOT_ENTRY
+.010185		e8		inx		                  INC X
+.010186		af 39 00 01	lda $010039	                  LDA FAT32_Root_entry_value
+.01018a		29 ff 00	and #$00ff	                  AND #$00FF
+.01018d		c9 e5 00	cmp #$00e5	                  CMP #$E5 ; test if the entry is deleted
+.010190		f0 e9		beq $01017b	                  BEQ FAT32_Open_File_Read_Next_Folder_Entry
+.010192		af 44 00 01	lda $010044	                  LDA FAT32_Root_entry_value +11 ; read the flags
+.010196		29 ff 00	and #$00ff	                  AND #$00FF
+.010199		c9 0f 00	cmp #$000f	                  CMP #$0F ; test if it's a long name entry
+.01019c		f0 dd		beq $01017b	                  BEQ FAT32_Open_File_Read_Next_Folder_Entry
+.01019e		c9 20 00	cmp #$0020	                  CMP #$20 ; if different from 0x20 its nor a file name entry (need to confirm that)
+.0101a1		d0 d8		bne $01017b	                  BNE FAT32_Open_File_Read_Next_Folder_Entry
+.0101a3		22 5c 02 01	jsl $01025c	                  JSL FAT32_Print_File_Name
+.0101a7		a9 0d 00	lda #$000d	                  LDA #$0D
+.0101aa		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
+.0101ae		da		phx		                  PHX
+.0101af		a2 ff ff	ldx #$ffff	                  LDX #-1
+.0101b2		e2 20		sep #$20	                SEP #$20        ; set A short
+.0101b4						FAT32_Open_File__CHAR_MATCHING
+.0101b4		e8		inx		                  INC X
+.0101b5		e0 0b 00	cpx #$000b	                  CPX #11 ; FAT12 file or folder size
+.0101b8		f0 13		beq $0101cd	                  BEQ FAT32_Open_File__STRING_MATCHED
+.0101ba		bf 39 00 01	lda $010039,x	                  LDA FAT32_Root_entry_value,X
+.0101be		bf 81 00 01	lda $010081,x	                  LDA file_to_load_f32,X
+.0101c2		df 39 00 01	cmp $010039,x	                  CMP FAT32_Root_entry_value,X
+.0101c6		f0 ec		beq $0101b4	                  BEQ FAT32_Open_File__CHAR_MATCHING
+.0101c8		fa		plx		                  PLX
+.0101c9		c2 20		rep #$20	                REP #$20        ; set A long
+.0101cb		80 ae		bra $01017b	                  BRA FAT32_Open_File_Read_Next_Folder_Entry
+.0101cd						FAT32_Open_File__STRING_MATCHED
+.0101cd		fa		plx		                  PLX
+.0101ce		c2 20		rep #$20	                REP #$20        ; set A long
+.0101d0		af 53 00 01	lda $010053	                  LDA FAT32_Root_entry_value + $1A ; Low two bytes of first cluster
+.0101d4		8f 75 00 01	sta $010075	                  STA FAT32_Curent_File_base_cluster
+.0101d8		a9 00 00	lda #$0000	                  LDA #0
+.0101db		8f 79 00 01	sta $010079	                  STA FAT32_Curent_File_curent_cluster
+.0101df		af 55 00 01	lda $010055	                  LDA FAT32_Root_entry_value + $1C ; High two bytes of first cluster
+.0101e3		8f 77 00 01	sta $010077	                  STA FAT32_Curent_File_base_cluster + 2
+.0101e7		a9 00 00	lda #$0000	                  LDA #0
+.0101ea		8f 7b 00 01	sta $01007b	                  STA FAT32_Curent_File_curent_cluster + 2
+.0101ee		a9 01 00	lda #$0001	                  LDA #1
+.0101f1						FAT32_Open_File__EXIT
+.0101f1		6b		rtl		                  RTL
+.0101f2						FAT32_Read_File
+.0101f2		af 79 00 01	lda $010079	                  LDA FAT32_Curent_File_curent_cluster
+.0101f6		c9 00 00	cmp #$0000	                  CMP #0
+.0101f9		d0 23		bne $01021e	                  BNE FAT32_Read_File___Get_Next_Sector
+.0101fb		af 7b 00 01	lda $01007b	                  LDA FAT32_Curent_File_curent_cluster+2
+.0101ff		c9 00 00	cmp #$0000	                  CMP #0
+.010202		d0 1a		bne $01021e	                  BNE FAT32_Read_File___Get_Next_Sector
+.010204		af 75 00 01	lda $010075	                  LDA FAT32_Curent_File_base_cluster
+.010208		8f 79 00 01	sta $010079	                  STA FAT32_Curent_File_curent_cluster
+.01020c		8f 61 00 01	sta $010061	                  STA FAT32_FAT_Entry
+.010210		af 77 00 01	lda $010077	                  LDA FAT32_Curent_File_base_cluster+2
+.010214		8f 7b 00 01	sta $01007b	                  STA FAT32_Curent_File_curent_cluster+2
+.010218		8f 63 00 01	sta $010063	                  STA FAT32_FAT_Entry+2
+.01021c		80 12		bra $010230	                  BRA FAT32_Read_File___Read_Sector
+.01021e						FAT32_Read_File___Get_Next_Sector
+.01021e		22 91 05 01	jsl $010591	                  JSL FAT32_IFAT_GET_FAT_ENTRY
+.010222		22 37 06 01	jsl $010637	                  JSL FAT32_Test_Fat_Entry_Validity
+.010226		c9 ff ff	cmp #$ffff	                  CMP #-1
+.010229		f0 30		beq $01025b	                  BEQ FAT32_Read_File___End_OF_File
+.01022b		c9 00 00	cmp #$0000	                  CMP #0
+.01022e		d0 2b		bne $01025b	                  BNE FAT32_Read_File___Reserved_Or_Bad_Sector
+.010230						FAT32_Read_File___Read_Sector
+.010230		af 75 00 01	lda $010075	                  LDA FAT32_Curent_File_base_cluster
+.010234		18		clc		                  CLC
+.010235		6f 6d 00 01	adc $01006d	                  ADC FAT32_Data_Base_Sector
+.010239		8f 7d 00 01	sta $01007d	                  STA FAT32_Sector_to_read
+.01023d		af 77 00 01	lda $010077	                  LDA FAT32_Curent_File_base_cluster+2
+.010241		6f 6f 00 01	adc $01006f	                  ADC FAT32_Data_Base_Sector + 2
+.010245		8f 7f 00 01	sta $01007f	                  STA FAT32_Sector_to_read + 2
+.010249		a9 01 00	lda #$0001	                  LDA #`FAT32_DATA_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
+.01024c		48		pha		                  PHA
+.01024d		a9 00 08	lda #$0800	                  LDA #<>FAT32_DATA_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
+.010250		48		pha		                  PHA
+.010251		af 7d 00 01	lda $01007d	                  LDA FAT32_Sector_to_read
+.010255		22 43 07 01	jsl $010743	                  JSL IHDD_READ
+.010259		68		pla		                  PLA
+.01025a		68		pla		                  PLA
+.01025b						FAT32_Read_File___End_OF_File
+.01025b						FAT32_Read_File___Reserved_Or_Bad_Sector
+.01025b		6b		rtl		                  RTL
+.01025c						FAT32_Print_File_Name
+.01025c		af 39 00 01	lda $010039	                LDA FAT32_Root_entry_value
+.010260		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.010264		af 3a 00 01	lda $01003a	                LDA FAT32_Root_entry_value +1
+.010268		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.01026c		af 3b 00 01	lda $01003b	                LDA FAT32_Root_entry_value +2
+.010270		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.010274		af 3c 00 01	lda $01003c	                LDA FAT32_Root_entry_value +3
+.010278		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.01027c		af 3d 00 01	lda $01003d	                LDA FAT32_Root_entry_value +4
+.010280		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.010284		af 3e 00 01	lda $01003e	                LDA FAT32_Root_entry_value +5
+.010288		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.01028c		af 3f 00 01	lda $01003f	                LDA FAT32_Root_entry_value +6
+.010290		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.010294		af 40 00 01	lda $010040	                LDA FAT32_Root_entry_value +7
+.010298		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.01029c		a9 2e 00	lda #$002e	                LDA #'.'
+.01029f		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.0102a3		af 41 00 01	lda $010041	                LDA FAT32_Root_entry_value +8
+.0102a7		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.0102ab		af 42 00 01	lda $010042	                LDA FAT32_Root_entry_value +9
+.0102af		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.0102b3		af 43 00 01	lda $010043	                LDA FAT32_Root_entry_value +10
+.0102b7		22 f9 09 19	jsl $1909f9	                JSL IPUTC
+.0102bb		6b		rtl		                RTL
+.0102bc						IFAT32_READ_MBR
+.0102bc		c2 20		rep #$20	                REP #$20        ; set A long
+.0102be		a9 01 00	lda #$0001	                  LDA #`FAT32_DATA_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
+.0102c1		48		pha		                  PHA
+.0102c2		a9 00 08	lda #$0800	                  LDA #<>FAT32_DATA_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
+.0102c5		48		pha		                  PHA
+.0102c6		a9 00 00	lda #$0000	                  LDA #0 ; read sector 0 (where the MBR sector is stored)
+.0102c9		22 43 07 01	jsl $010743	                  JSL IHDD_READ
+.0102cd		fa		plx		                  PLX
+.0102ce		fa		plx		                  PLX
+.0102cf		a2 be 01	ldx #$01be	                  LDX #MBR_Partition_Entry
+.0102d2						READ_MBR_Scan
+.0102d2		bf 08 08 01	lda $010808,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X+8
+.0102d6		c9 00 00	cmp #$0000	                  CMP #0
+.0102d9		f0 03		beq $0102de	                  BEQ READ_MBR_Partition_Entry_LSB_Not_Null
+.0102db		a0 01 00	ldy #$0001	                  LDY #1
+.0102de						READ_MBR_Partition_Entry_LSB_Not_Null
+.0102de		8f 71 00 01	sta $010071	                  STA MBR_Partition_address
+.0102e2		bf 0a 08 01	lda $01080a,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X+8+2
+.0102e6		c9 00 00	cmp #$0000	                  CMP #0
+.0102e9		f0 03		beq $0102ee	                  BEQ READ_MBR_Partition_Entry_MSB_Not_Null
+.0102eb		a0 01 00	ldy #$0001	                  LDY #1
+.0102ee						READ_MBR_Partition_Entry_MSB_Not_Null
+.0102ee		8f 73 00 01	sta $010073	                  STA MBR_Partition_address+2
+.0102f2		c0 01 00	cpy #$0001	                  CPY #1
+.0102f5		f0 0c		beq $010303	                  BEQ READ_MBR_Partition_valid_address
+.0102f7		e0 fe 01	cpx #$01fe	                  CPX #$1FE
+.0102fa		f0 46		beq $010342	                  BEQ READ_MBR_End_Scan_no_partition
+.0102fc		8a		txa		                  TXA
+.0102fd		69 10 00	adc #$0010	                  ADC #MBR_Partition_Entry_size
+.010300		aa		tax		                  TAX
+.010301		80 cf		bra $0102d2	                  BRA READ_MBR_Scan
+.010303						READ_MBR_Partition_valid_address
+.010303		a2 25 04	ldx #$0425	                  LDX #<>Partition_ofset_text
+.010306		a9 02 00	lda #$0002	                  LDA #`Partition_ofset_text
+.010309		22 e8 93 01	jsl $0193e8	                  JSL IPRINT_ABS       ; print the first line
+.01030d		a9 30 00	lda #$0030	                  LDA #'0'
+.010310		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
+.010314		a9 78 00	lda #$0078	                  LDA #'x'
+.010317		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
+.01031b		af 74 00 01	lda $010074	                  LDA MBR_Partition_address +3
+.01031f		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
+.010323		af 73 00 01	lda $010073	                  LDA MBR_Partition_address +2
+.010327		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
+.01032b		af 72 00 01	lda $010072	                  LDA MBR_Partition_address +1
+.01032f		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
+.010333		af 71 00 01	lda $010071	                  LDA MBR_Partition_address
+.010337		22 0f 94 01	jsl $01940f	                  JSL IPRINT_HEX
+.01033b		a9 0d 00	lda #$000d	                  LDA #$0D
+.01033e		22 f9 09 19	jsl $1909f9	                  JSL IPUTC
+.010342						READ_MBR_End_Scan_no_partition
+.010342		a9 ff ff	lda #$ffff	                  LDA #-1
+.010345						READ_MBR_End
+.010345		6b		rtl		                  RTL
+.010346						IFAT32_READ_BOOT_SECTOR
+.010346		c2 30		rep #$30	                REP #$30        ; set A&X long
+.010348		a9 01 00	lda #$0001	                  LDA #`FAT32_DATA_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
+.01034b		48		pha		                  PHA
+.01034c		a9 00 08	lda #$0800	                  LDA #<>FAT32_DATA_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
+.01034f		48		pha		                  PHA
+.010350		af 73 00 01	lda $010073	                  LDA MBR_Partition_address+2 ; dont use X value for now IHDD_READ is a dummy function unlit I ger the real HDD hardware driver
+.010354		aa		tax		                  TAX
+.010355		af 71 00 01	lda $010071	                  LDA MBR_Partition_address
+.010359		22 43 07 01	jsl $010743	                  JSL IHDD_READ
+.01035d		fa		plx		                  PLX
+.01035e		fa		plx		                  PLX;
+.01035f		8f 2b 00 01	sta $01002b	                  STA FAT32_Sector_loaded_in_ram
+.010363		a2 0b 00	ldx #$000b	                  LDX #$B ;11
+.010366		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.01036a		8f 00 00 01	sta $010000	                  STA FAT32_Byte_Per_Sector
+.01036e		a2 0d 00	ldx #$000d	                  LDX #$0D ;13
+.010371		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.010375		29 ff 00	and #$00ff	                  AND #$FF
+.010378		8f 02 00 01	sta $010002	                  STA FAT32_Sector_Per_Cluster
+.01037c		a2 0e 00	ldx #$000e	                  LDX #$0E ;14
+.01037f		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.010383		8f 04 00 01	sta $010004	                  STA FAT32_Nb_Of_reserved_Cluster
+.010387		a2 10 00	ldx #$0010	                  LDX #$10 ;16
+.01038a		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.01038e		29 ff 00	and #$00ff	                  AND #$FF
+.010391		8f 06 00 01	sta $010006	                  STA FAT32_Nb_Of_FAT
+.010395		a2 18 00	ldx #$0018	                  LDX #24 ;
+.010398		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.01039c		8f 10 00 01	sta $010010	                  STA FAT32_Sector_per_Track
+.0103a0		a2 1a 00	ldx #$001a	                  LDX #26 ;
+.0103a3		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.0103a7		8f 12 00 01	sta $010012	                  STA FAT32_Nb_of_Head
+.0103ab		a2 24 00	ldx #$0024	                  LDX #$24 ;36 ;
+.0103ae		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.0103b2		8f 0c 00 01	sta $01000c	                  STA FAT32_Sector_per_Fat
+.0103b6		a2 26 00	ldx #$0026	                  LDX #$26 ;36 ;
+.0103b9		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.0103bd		8f 0e 00 01	sta $01000e	                  STA FAT32_Sector_per_Fat+2
+.0103c1		a2 2c 00	ldx #$002c	                  LDX #$2C ;
+.0103c4		bf 00 08 01	lda $010800,x	                  LDA FAT32_DATA_ADDRESS_BUFFER_512,X
+.0103c8		29 ff 00	and #$00ff	                  AND #$FF ; Byte balue
+.0103cb		8f 2f 00 01	sta $01002f	                  STA FAT32_Root_Fat_Sector_offset
+.0103cf		af 00 00 01	lda $010000	                  LDA FAT32_Byte_Per_Sector
+.0103d3		c9 00 02	cmp #$0200	                  CMP #512
+.0103d6		d0 32		bne $01040a	                  BNE FAT32_ERROR_BLOCK_SEIZE
+.0103d8		af 02 00 01	lda $010002	                  LDA FAT32_Sector_Per_Cluster
+.0103dc		c9 01 00	cmp #$0001	                  CMP #1
+.0103df		d0 2e		bne $01040f	                  BNE FAT32_ERROR_SECTOR_PER_CLUSTER
+.0103e1		af 04 00 01	lda $010004	                  LDA FAT32_Nb_Of_reserved_Cluster
+.0103e5		c9 01 00	cmp #$0001	                  CMP #1
+.0103e8		90 2a		bcc $010414	                  BCC FAT32_ERROR_RESERVED_SECTOR
+.0103ea		af 06 00 01	lda $010006	                  LDA FAT32_Nb_Of_FAT
+.0103ee		c9 01 00	cmp #$0001	                  CMP #1
+.0103f1		90 26		bcc $010419	                  BCC FAT32_ERROR_NB_FAT
+.0103f3		af 0c 00 01	lda $01000c	                  LDA FAT32_Sector_per_Fat
+.0103f7		c9 00 00	cmp #$0000	                  CMP #0
+.0103fa		f0 2c		beq $010428	                  BEQ FAT32_ERROR_SECTOR_PER_FAT
+.0103fc		af 2f 00 01	lda $01002f	                  LDA FAT32_Root_Fat_Sector_offset
+.010400		c9 02 00	cmp #$0002	                  CMP #2
+.010403		90 28		bcc $01042d	                  BCC FAT32_ERROR_FAT_SECTOR_OFFSET
+.010405		a9 01 00	lda #$0001	                  LDA #1
+.010408		80 35		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.01040a		a9 ff ff	lda #$ffff	FAT32_ERROR_BLOCK_SEIZE LDA #-1
+.01040d		80 30		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.01040f						FAT32_ERROR_SECTOR_PER_CLUSTER
+.01040f		a9 fe ff	lda #$fffe	                  LDA #-2
+.010412		80 2b		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.010414						FAT32_ERROR_RESERVED_SECTOR
+.010414		a9 fd ff	lda #$fffd	                  LDA #-3
+.010417		80 26		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.010419		a9 fc ff	lda #$fffc	FAT32_ERROR_NB_FAT      LDA #-4
+.01041c		80 21		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.01041e						FAT32_ERROR_NB_ROOT_ENTRY
+.01041e		a9 fb ff	lda #$fffb	                  LDA #-5
+.010421		80 1c		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.010423						FAT32_ERROR_NB_TOTAL_SECTOR_COUNT
+.010423		a9 fa ff	lda #$fffa	                  LDA #-6
+.010426		80 17		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.010428						FAT32_ERROR_SECTOR_PER_FAT
+.010428		a9 f9 ff	lda #$fff9	                  LDA #-7
+.01042b		80 12		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.01042d						FAT32_ERROR_FAT_SECTOR_OFFSET
+.01042d		a9 f5 ff	lda #$fff5	                  LDA #-11
+.010430		80 0d		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.010432						FAT32_ERROR_SECTOR_PER_TRACK
+.010432		a9 f8 ff	lda #$fff8	                  LDA #-8
+.010435		80 08		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.010437						FAT32_ERROR_NB_HEAD_NULL
+.010437		a9 f7 ff	lda #$fff7	                  LDA #-9
+.01043a		80 03		bra $01043f	                  BRA RETURN_IFAT32_READ_BOOT_SECTOR
+.01043c						FAT32_ERROR_BOOT_SIGNATURE
+.01043c		a9 f6 ff	lda #$fff6	                  LDA #-10
+.01043f						RETURN_IFAT32_READ_BOOT_SECTOR
+.01043f		6b		rtl		                  RTL
+.010440						IFAT32_COMPUT_DATA_POS
+.010440		c2 30		rep #$30	                REP #$30        ; set A&X long
+.010442		af 06 00 01	lda $010006	                  LDA FAT32_Nb_Of_FAT;
+.010446		aa		tax		                  TAX
+.010447		af 0c 00 01	lda $01000c	                  LDA FAT32_Sector_per_Fat
+.01044b		ca		dex		FAT32_DATA_POS_ADD_ONE_FAT       DEC X
+.01044c		e0 00 00	cpx #$0000	                  CPX #0
+.01044f		f0 07		beq $010458	                  BEQ FAT32_DATA_POS_FDD_END_LOOP_FAT_SECTOR_USAGE
+.010451		18		clc		                  CLC
+.010452		6f 0c 00 01	adc $01000c	                  ADC FAT32_Sector_per_Fat
+.010456		80 f3		bra $01044b	                  BRA FAT32_DATA_POS_ADD_ONE_FAT
+.010458						FAT32_DATA_POS_FDD_END_LOOP_FAT_SECTOR_USAGE
 .010458		18		clc		                  CLC
-.010459		69 00 0a	adc #$0a00	                  ADC #<>FAT32_FAT_ADDRESS_BUFFER_512
-.01045c		aa		tax		                  TAX
-.01045d		a9 63 00	lda #$0063	                  LDA #<>FAT32_FAT_Next_Entry
-.010460		a8		tay		                  TAY
-.010461		a9 03 00	lda #$0003	                  LDA #3 ; read 4 byte
-.010464		54 01 01	mvn $01,$01	                  MVN `FAT32_FAT_Next_Entry,`FAT32_FAT_ADDRESS_BUFFER_512
-.010467		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Next_Entry    ; FOR DEBUG
-.01046b		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry+2  ; FOR DEBUG
-.01046f		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Next_Entry    ; FOR DEBUG
-.010473		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry+2  ; FOR DEBUG
-.010477		7a		ply		                  PLY
-.010478		fa		plx		                  PLX
-.010479		68		pla		                  PLA
-.01047a		6b		rtl		                  RTL
-.01047b						FAT32_ILOAD_FILE
-.01047b		22 f8 01 01	jsl $0101f8	                  JSL IFAT32_READ_BOOT_SECTOR
-.01047f		c9 01 00	cmp #$0001	                  CMP #$0001
-.010482		f0 05		beq $010489	                  BEQ ILOAD_FILE_FAT_32_BOOT_SECTOR_PARSING_OK
-.010484		a9 ff ff	lda #$ffff	                  LDA #-1
-.010487		80 4b		bra $0104d4	                  BRA FAT32_ILOAD_FILE_RETURN_ERROR_temp
-.010489						ILOAD_FILE_FAT_32_BOOT_SECTOR_PARSING_OK
-.010489		22 d6 02 01	jsl $0102d6	                  JSL IFAT32_COMPUT_ROOT_DIR_POS
-.01048d		c2 30		rep #$30	                REP #$30        ; set A&X long
-.01048f		a9 00 00	lda #$0000	                  LDA #$00 ; sellect the first entry
-.010492		48		pha		                  PHA
-.010493						FAT32_ILOAD_FILE_READ_NEXT_ROOT_ENTRY
-.010493		22 5f 03 01	jsl $01035f	                  JSL IFAT32_GET_ROOT_ENTRY
-.010497		af 42 00 01	lda $010042	                  LDA FAT32_Root_entry_value + 11 ; get the flag Byte to test if it a file or a directory
-.01049b		29 10 00	and #$0010	                  AND #$10
-.01049e		c9 10 00	cmp #$0010	                  CMP #$10
-.0104a1		d0 0b		bne $0104ae	                  BNE FAT32_ILOAD_FILE_ENTRY ; if equal we read a directory so just read the next one
-.0104a3						FAT32_ILOAD_FILE_STRING_NOT_MATCHED
-.0104a3		68		pla		                  PLA   ; get the actual root entry
-.0104a4		cf 08 00 01	cmp $010008	                  CMP FAT32_Max_Root_Entry ; prevent to loop forever so exit
-.0104a8		f0 26		beq $0104d0	                  BEQ FAT32_ILOAD_FILE_NO_FILE_MATCHED
-.0104aa		1a		inc a		                  INC A ; sellect the next root entry
-.0104ab		48		pha		                  PHA   ; save the next root entry to read
-.0104ac		80 e5		bra $010493	                  BRA FAT32_ILOAD_FILE_READ_NEXT_ROOT_ENTRY
-.0104ae						FAT32_ILOAD_FILE_ENTRY
-.0104ae		c2 30		rep #$30	                REP #$30        ; set A&X long
-.0104b0		68		pla		                  PLA   ; get the actual root entry
-.0104b1		cf 08 90 01	cmp $019008	                  CMP Max_Root_Entry ; prevent to loop forever so exit
-.0104b5		f0 19		beq $0104d0	                  BEQ FAT32_ILOAD_FILE_NO_FILE_MATCHED
-.0104b7		1a		inc a		                  INC A ; sellect the next root entry
-.0104b8		48		pha		                  PHA   ; save the next root entry to read
-.0104b9		a2 ff ff	ldx #$ffff	                  LDX #-1
-.0104bc		a0 ff ff	ldy #$ffff	                  LDY #-1
-.0104bf						FAT32_ILOAD_FILE_CHAR_MATCHING
-.0104bf		e8		inx		                  INC X
-.0104c0		c8		iny		                  INC Y
-.0104c1		e0 0b 00	cpx #$000b	                  CPX #11 ; FAT12 file or folder size
-.0104c4		f0 10		beq $0104d6	                  BEQ FAT32_ILOAD_FILE_STRING_MATCHED
-.0104c6		b3 06		lda ($06,s),y	                  LDA (6,S),Y ; load the "y" char file name we want to read
-.0104c8		df 37 00 01	cmp $010037,x	                  CMP FAT32_Root_entry_value,X
-.0104cc		f0 f1		beq $0104bf	                  BEQ FAT32_ILOAD_FILE_CHAR_MATCHING
-.0104ce		80 d3		bra $0104a3	                  BRA FAT32_ILOAD_FILE_STRING_NOT_MATCHED
-.0104d0						FAT32_ILOAD_FILE_NO_FILE_MATCHED
-.0104d0		68		pla		                  PLA
-.0104d1		a9 fe ff	lda #$fffe	                  LDA #-2
-.0104d4						FAT32_ILOAD_FILE_RETURN_ERROR_temp
-.0104d4		80 60		bra $010536	                  BRA FAT32_ILOAD_FILE_RETURN_ERROR
-.0104d6						FAT32_ILOAD_FILE_STRING_MATCHED
-.0104d6		68		pla		                  PLA
-.0104d7		af 51 00 01	lda $010051	                  LDA FAT32_Root_entry_value + 26 ; get the first fat entry for the fil from the root directory entry we matched
-.0104db		8f 63 00 01	sta $010063	                  STA FAT32_FAT_Next_Entry
-.0104df						FAT32_ILOAD_FILE_Read_next_sector
-.0104df		a3 0a		lda $0a,s	                  LDA 10,S ; load the byte nb 3 (bank byte)
-.0104e1		48		pha		                  PHA
-.0104e2		a3 0c		lda $0c,s	                  LDA 12,S ; load the low world part of the buffer address
-.0104e4		48		pha		                  PHA
-.0104e5		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Next_Entry ; sector to read
-.0104e9		69 21 00	adc #$0021	                  ADC #1+9+9+14 ; skip the reserved sector ,  the 2 fat and the root sector
-.0104ec		22 37 05 01	jsl $010537	                  JSL IHDD_READ
-.0104f0		fa		plx		                  PLX
-.0104f1		fa		plx		                  PLX
-.0104f2		a3 0c		lda $0c,s	                  LDA 12,S ; load the low world part of the buffer address
-.0104f4		18		clc		                  CLC
-.0104f5		a9 00 00	lda #$0000	                  LDA #0
-.0104f8		48		pha		                  PHA ; save the conter vaue
-.0104f9		48		pha		                  PHA ; save the
-.0104fa						FAT32_ILOAD_FILE_Add_More_Sector_Per_Cluster
-.0104fa		a3 04		lda $04,s	                  LDA 4,S ; load the Byte per cluster value
-.0104fc		6f 00 00 01	adc $010000	                  ADC FAT32_Byte_Per_Sector
-.010500		83 04		sta $04,s	                  STA 4,S
-.010502		af 02 00 01	lda $010002	                  LDA FAT32_Sector_Per_Cluster
-.010506		c3 02		cmp $02,s	                  CMP 2,S
-.010508		f0 07		beq $010511	                  BEQ FAT32_ILOAD_FILE_Read_Next_Data
-.01050a		a3 02		lda $02,s	                  LDA 2,S
-.01050c		1a		inc a		                  INC A
-.01050d		83 02		sta $02,s	                  STA 2,S
-.01050f		80 e9		bra $0104fa	                  BRA FAT32_ILOAD_FILE_Add_More_Sector_Per_Cluster
-.010511						FAT32_ILOAD_FILE_Read_Next_Data
-.010511		fa		plx		                  PLX ; removing the compter valuer from the stack
-.010512		a3 0e		lda $0e,s	                  LDA 14,S ; load the low world part of the buffer address
-.010514		18		clc		                  CLC
-.010515		63 02		adc $02,s	                  ADC 2,S
-.010517		90 09		bcc $010522	                  BCC FAT32_ILOAD_FILE_New_Buiffer_Address_computed
-.010519		83 0e		sta $0e,s	                  STA 14,S ; Save the low world part of the buffer address
-.01051b		a3 0c		lda $0c,s	                  LDA 12,S ; load the byte nb 3 (bank byte)
-.01051d		69 01 00	adc #$0001	                  ADC #1
-.010520		83 0c		sta $0c,s	                  STA 12,S ; Save the byte nb 3 (bank byte)
-.010522						FAT32_ILOAD_FILE_New_Buiffer_Address_computed
-.010522		fa		plx		                  PLX ; get the Byte per cluster count out of the stack
-.010523		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Next_Entry ; sector to read
-.010527		22 d5 03 01	jsl $0103d5	                  JSL FAT32_IFAT_GET_FAT_ENTRY
-.01052b		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Next_Entry
-.01052f		c9 fe 0f	cmp #$0ffe	                  CMP #$FFE
-.010532		b0 02		bcs $010536	                  BCS FAT32_ILOAD_FILE_END_OF_FILE
-.010534		80 a9		bra $0104df	                  BRA FAT32_ILOAD_FILE_Read_next_sector
-.010536						FAT32_ILOAD_FILE_END_OF_FILE
-.010536						FAT32_ILOAD_FILE_RETURN_ERROR
-.010536		6b		rtl		                  RTL
-.010537						IHDD_READ
-.010537		c2 30		rep #$30	                REP #$30        ; set A&X long
-.010539		48		pha		                PHA ; save the sector to read
-.01053a		a3 08		lda $08,s	                LDA 8,S
-.01053c		a8		tay		                TAY
-.01053d		a3 06		lda $06,s	                LDA 6,S
-.01053f		a8		tay		                TAY
-.010540		68		pla		                PLA
-.010541		48		pha		                PHA ; save the sector read for the return value
-.010542		0a		asl a		                ASL A ; convert the sector number into byte count
-.010543		0a		asl a		                ASL A
-.010544		0a		asl a		                ASL A
-.010545		0a		asl a		                ASL A
-.010546		0a		asl a		                ASL A
-.010547		0a		asl a		                ASL A
-.010548		0a		asl a		                ASL A
-.010549		0a		asl a		                ASL A
-.01054a		0a		asl a		                ASL A
-.01054b		69 00 20	adc #$2000	                ADC #<>data_hard_drive
-.01054e		aa		tax		                TAX
-.01054f		e2 20		sep #$20	                SEP #$20        ; set A short
-.010551		a3 08		lda $08,s	                LDA 8,S
-.010553		8f 5e 05 01	sta $01055e	                STA HDD_MVN_INSTRUCTION_ADDRESS + 2 ; rewrite the second parameter of the instruction in RAM
-.010557		c2 30		rep #$30	                REP #$30        ; set A&X long
-.010559		a9 ff 01	lda #$01ff	                LDA #511
-.01055c		54 01 01	mvn $01,$01	HDD_MVN_INSTRUCTION_ADDRESS  MVN `FAT32_DATA_ADDRESS_BUFFER_512,`data_hard_drive
-.01055f		68		pla		                PLA
-.010560		6b		rtl		                RTL
+.010459		6f 04 00 01	adc $010004	                  ADC FAT32_Nb_Of_reserved_Cluster
+.01045d		18		clc		                  CLC
+.01045e		6f 71 00 01	adc $010071	                  ADC MBR_Partition_address; at this point we have the sector where the Root directory is starting
+.010462		8f 6d 00 01	sta $01006d	                  STA FAT32_Data_Base_Sector
+.010466		6b		rtl		                  RTL
+.010467						IFAT32_COMPUT_ROOT_DIR_POS
+.010467		c2 30		rep #$30	                REP #$30        ; set A&X long
+.010469		af 06 00 01	lda $010006	                  LDA FAT32_Nb_Of_FAT;
+.01046d		aa		tax		                  TAX
+.01046e		af 0c 00 01	lda $01000c	                  LDA FAT32_Sector_per_Fat
+.010472		ca		dex		FAT32_ADD_ONE_FAT       DEC X
+.010473		e0 00 00	cpx #$0000	                  CPX #0
+.010476		f0 07		beq $01047f	                  BEQ FAT32_FDD_END_LOOP_FAT_SECTOR_USAGE
+.010478		18		clc		                  CLC
+.010479		6f 0c 00 01	adc $01000c	                  ADC FAT32_Sector_per_Fat
+.01047d		80 f3		bra $010472	                  BRA FAT32_ADD_ONE_FAT
+.01047f						FAT32_FDD_END_LOOP_FAT_SECTOR_USAGE
+.01047f		18		clc		                  CLC
+.010480		6f 04 00 01	adc $010004	                  ADC FAT32_Nb_Of_reserved_Cluster
+.010484		18		clc		                  CLC
+.010485		6f 2f 00 01	adc $01002f	                  ADC FAT32_Root_Fat_Sector_offset
+.010489		18		clc		                  CLC
+.01048a		6f 71 00 01	adc $010071	                  ADC MBR_Partition_address; at this point we have the sector where the Root directory is starting
+.01048e		8f 31 00 01	sta $010031	                  STA FAT32_Root_Base_Sector
+.010492		6b		rtl		                  RTL
+.010493						IFAT32_GET_ROOT_FIRST_ENTRY
+.010493		c2 30		rep #$30	                REP #$30        ; set A&X long
+.010495		6b		rtl		                  RTL
+.010496						IFAT32_GET_ROOT_NEXT_ENTRY
+.010496		c2 30		rep #$30	                REP #$30        ; set A&X long
+.010498		6b		rtl		                  RTL
+.010499						IFAT32_COMPUT_FAT_POS
+.010499		c2 30		rep #$30	                REP #$30        ; set A&X long
+.01049b		af 04 00 01	lda $010004	                  LDA FAT32_Nb_Of_reserved_Cluster
+.01049f		18		clc		                  CLC
+.0104a0		6f 71 00 01	adc $010071	                  ADC MBR_Partition_address;
+.0104a4		8f 59 00 01	sta $010059	                  STA FAT32_FAT_Base_Sector
+.0104a8		6b		rtl		                  RTL
+.0104a9						IFAT32_READ_LIKED_FAT_ENTRY
+.0104a9		da		phx		                  PHX
+.0104aa						  IFAT32_READ_LIKED_FAT_ENTRY___READ_NEXT_FAT
+.0104aa		22 91 05 01	jsl $010591	                  JSL FAT32_IFAT_GET_FAT_ENTRY
+.0104ae		af 67 00 01	lda $010067	                  LDA FAT32_FAT_Next_Entry +2 ; test for EOC (End Of Cluster)
+.0104b2		29 ff 0f	and #$0fff	                  AND #$0FFF ; the 4 MSB are not used in the FAT32
+.0104b5		c9 ff 0f	cmp #$0fff	                  CMP #$0FFF
+.0104b8		d0 30		bne $0104ea	                  BNE IFAT32_READ_LIKED_FAT_ENTRY___TEST_NULL_VALUE
+.0104ba		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; test for EOC (End Of Cluster)
+.0104be		29 f0 ff	and #$fff0	                  AND #$FFF0
+.0104c1		c9 f0 ff	cmp #$fff0	                  CMP #$FFF0
+.0104c4		d0 24		bne $0104ea	                  BNE IFAT32_READ_LIKED_FAT_ENTRY___TEST_NULL_VALUE
+.0104c6		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; the cluster entry is not usable or its the last in the chaine
+.0104ca		29 0f 00	and #$000f	                  AND #$000F
+.0104cd		c9 08 00	cmp #$0008	                  CMP #8
+.0104d0		30 05		bmi $0104d7	                  BMI IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_RESERVED_OR_BAD
+.0104d2		a9 ff ff	lda #$ffff	                  LDA #-1 ; end of the file
+.0104d5		80 43		bra $01051a	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___EOC
+.0104d7						IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_RESERVED_OR_BAD
+.0104d7		c9 07 00	cmp #$0007	                  CMP #7
+.0104da		d0 05		bne $0104e1	                  BNE IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_RESERVED
+.0104dc		a9 fe ff	lda #$fffe	                  LDA #-2 ; Bad sector
+.0104df		80 39		bra $01051a	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___EXIT
+.0104e1						IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_RESERVED
+.0104e1		a9 fd ff	lda #$fffd	                  LDA #-3 ; reserved sector
+.0104e4		80 34		bra $01051a	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___EXIT
+.0104e6		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; test for EOC (End Of Cluster)
+.0104ea						IFAT32_READ_LIKED_FAT_ENTRY___TEST_NULL_VALUE
+.0104ea		c9 00 00	cmp #$0000	                  CMP #0
+.0104ed		d0 0e		bne $0104fd	                  BNE IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_VALID
+.0104ef		af 67 00 01	lda $010067	                  LDA FAT32_FAT_Next_Entry + 2 ; test for EOC (End Of Cluster)
+.0104f3		c9 00 00	cmp #$0000	                  CMP #0
+.0104f6		d0 05		bne $0104fd	                  BNE IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_VALID
+.0104f8		a9 fc ff	lda #$fffc	                  LDA #-4 ; empty sector
+.0104fb		80 1d		bra $01051a	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___EXIT
+.0104fd						IFAT32_READ_LIKED_FAT_ENTRY___NEXT_CLUSTER_VALID
+.0104fd		af 69 00 01	lda $010069	                  LDA FAT32_FAT_Linked_Entry
+.010501		3a		dec a		                  DEC A
+.010502		30 06		bmi $01050a	                  BMI IFAT32_READ_LIKED_FAT_ENTRY___UNDERFLOW
+.010504		8f 61 00 01	sta $010061	                  STA FAT32_FAT_Entry ; update the low part the the fat entry we want to read
+.010508		80 a0		bra $0104aa	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___READ_NEXT_FAT
+.01050a						IFAT32_READ_LIKED_FAT_ENTRY___UNDERFLOW
+.01050a		af 6b 00 01	lda $01006b	                  LDA FAT32_FAT_Linked_Entry+2
+.01050e		3a		dec a		                  DEC A
+.01050f		30 06		bmi $010517	                  BMI IFAT32_READ_LIKED_FAT_ENTRY___WENT_THRW_ALL_FAT_LINKED
+.010511		8f 63 00 01	sta $010063	                  STA FAT32_FAT_Entry+2
+.010515		80 93		bra $0104aa	                  BRA IFAT32_READ_LIKED_FAT_ENTRY___READ_NEXT_FAT
+.010517						IFAT32_READ_LIKED_FAT_ENTRY___WENT_THRW_ALL_FAT_LINKED
+.010517		a9 01 00	lda #$0001	                  LDA #1
+.01051a						IFAT32_READ_LIKED_FAT_ENTRY___EOC
+.01051a						IFAT32_READ_LIKED_FAT_ENTRY___EXIT
+.01051a		fa		plx		                  PLX
+.01051b		6b		rtl		                  RTL
+.01051c						IFAT32_GET_ROOT_ENTRY
+.01051c		c2 30		rep #$30	                REP #$30        ; set A&X long
+.01051e		da		phx		                  PHX
+.01051f		48		pha		                  PHA ; Save the root entry index we want to read
+.010520		a2 00 00	ldx #$0000	                  LDX #0 ; compute in witch sector the desired root entry is, 16 entry per sector so we just need to divid the sector size by 16
+.010523						FAT32_KEEP_SHIFT_ROOT_ENTRY_INDEX
+.010523		4a		lsr a		                  LSR
+.010524		e8		inx		                  INC X
+.010525		e0 04 00	cpx #$0004	                  CPX #4 ; divide by 16
+.010528		d0 f9		bne $010523	                  BNE FAT32_KEEP_SHIFT_ROOT_ENTRY_INDEX
+.01052a		c9 00 00	cmp #$0000	                  CMP #0
+.01052d		f0 24		beq $010553	                  BEQ IFAT32_GET_ROOT_ENTRY__Load_first_sector
+.01052f		8f 69 00 01	sta $010069	                  STA FAT32_FAT_Linked_Entry
+.010533		a9 00 00	lda #$0000	                  LDA #0
+.010536		8f 6b 00 01	sta $01006b	                  STA FAT32_FAT_Linked_Entry+2
+.01053a		af 31 00 01	lda $010031	                  LDA FAT32_Root_Base_Sector
+.01053e		8f 61 00 01	sta $010061	                  STA FAT32_FAT_Entry
+.010542		af 33 00 01	lda $010033	                  LDA FAT32_Root_Base_Sector +2
+.010546		8f 63 00 01	sta $010063	                  STA FAT32_FAT_Entry + 2
+.01054a		22 a9 04 01	jsl $0104a9	                  JSL IFAT32_READ_LIKED_FAT_ENTRY
+.01054e		c9 00 00	cmp #$0000	                  CMP #0
+.010551		30 3b		bmi $01058e	                  BMI IFAT32_GET_ROOT_ENTRY__ERROR_RETURNED
+.010553						IFAT32_GET_ROOT_ENTRY__Load_first_sector
+.010553		18		clc		                  CLC ; reset the carry flag potencialy set by CPX
+.010554		6f 31 00 01	adc $010031	                  ADC FAT32_Root_Base_Sector ; add the relative sector position of the root entry to the start root entry position shoud be 19 (0 based index)
+.010558		cf 35 00 01	cmp $010035	                  CMP FAT32_Root_Sector_loaded_in_ram
+.01055c		f0 16		beq $010574	                  BEQ FAT32_FDD_SECTOR_ALREADDY_LOADDED_IN_RAM
+.01055e		8f 35 00 01	sta $010035	                  STA FAT32_Root_Sector_loaded_in_ram ; save the new sector loaded
+.010562		a9 01 00	lda #$0001	                  LDA #`FAT32_FOLDER_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
+.010565		48		pha		                  PHA
+.010566		a9 00 0c	lda #$0c00	                  LDA #<>FAT32_FOLDER_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
+.010569		48		pha		                  PHA
+.01056a		af 35 00 01	lda $010035	                  LDA FAT32_Root_Sector_loaded_in_ram ; Get the ROOT directory sector saved rearlyer
+.01056e		22 43 07 01	jsl $010743	                  JSL IHDD_READ
+.010572		fa		plx		                  PLX
+.010573		fa		plx		                  PLX
+.010574						FAT32_FDD_SECTOR_ALREADDY_LOADDED_IN_RAM
+.010574		68		pla		                  PLA ; GET the root entry FDD_INDEX
+.010575		29 0f 00	and #$000f	                  AND #$0F ; get only the 4 first byte to get the 16 value ofset in the root entry sector loades in ram (16 entry per sector)
+.010578		0a		asl a		                  ASL
+.010579		0a		asl a		                  ASL
+.01057a		0a		asl a		                  ASL
+.01057b		0a		asl a		                  ASL
+.01057c		0a		asl a		                  ASL ; now A contain the ofset to read the root entry from
+.01057d		18		clc		                  CLC
+.01057e		69 00 0c	adc #$0c00	                  ADC #<>FAT32_FOLDER_ADDRESS_BUFFER_512
+.010581		aa		tax		                  TAX
+.010582		a9 39 00	lda #$0039	                  LDA #<>FAT32_Root_entry_value
+.010585		a8		tay		                  TAY
+.010586		a9 1f 00	lda #$001f	                  LDA #31
+.010589		54 01 01	mvn $01,$01	                  MVN `FAT32_Root_entry_value, `FAT32_FOLDER_ADDRESS_BUFFER_512
+.01058c		80 01		bra $01058f	                  BRA IFAT32_GET_ROOT_ENTRY___EXIT_OK
+.01058e						IFAT32_GET_ROOT_ENTRY__ERROR_RETURNED
+.01058e		fa		plx		                  PLX
+.01058f						IFAT32_GET_ROOT_ENTRY___EXIT_OK
+.01058f		fa		plx		                  PLX
+.010590		6b		rtl		                  RTL
+.010591						FAT32_IFAT_GET_FAT_ENTRY
+.010591		48		pha		                  PHA
+.010592		da		phx		                  PHX
+.010593		5a		phy		                  PHY
+.010594		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Entry+2
+.010598		c9 00 00	cmp #$0000	                  CMP #0
+.01059b		d0 13		bne $0105b0	                  BNE FAT32_FAT_ENTRY_FIND_THE_CLUSTER ; the FAT entry is definitly not in the first FAT cluster
+.01059d		af 61 00 01	lda $010061	                  LDA FAT32_FAT_Entry
+.0105a1		4a		lsr a		                  LSR A
+.0105a2		4a		lsr a		                  LSR A
+.0105a3		4a		lsr a		                  LSR A
+.0105a4		4a		lsr a		                  LSR A
+.0105a5		8f 65 00 01	sta $010065	                  STA FAT32_FAT_Next_Entry
+.0105a9		c9 00 00	cmp #$0000	                  CMP #0
+.0105ac		d0 02		bne $0105b0	                  BNE FAT32_FAT_ENTRY_FIND_THE_CLUSTER
+.0105ae		80 36		bra $0105e6	                  BRA FAT32_ENTRY_SECTOR_LOCATION_FIND ; if this part of the code is riched, its mean that the FAT entry requested is with in the first FAT clustrer (entry smaller than 16)
+.0105b0						FAT32_FAT_ENTRY_FIND_THE_CLUSTER
+.0105b0		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Entry+2
+.0105b4		4a		lsr a		                  LSR A
+.0105b5		4a		lsr a		                  LSR A
+.0105b6		4a		lsr a		                  LSR A
+.0105b7		4a		lsr a		                  LSR A ; comput the high part divided by 16
+.0105b8		8f 67 00 01	sta $010067	                  STA FAT32_FAT_Next_Entry+2 ; use FAT32_FAT_Next_Entry as a temporary variable
+.0105bc		af 63 00 01	lda $010063	                  LDA FAT32_FAT_Entry+2 ;extract the 4 bits of the HIGHT part of FAT32_FAT_Entry to casrry them in the LOW part
+.0105c0		29 0f 00	and #$000f	                  AND #$F
+.0105c3		0a		asl a		                  ASL A
+.0105c4		0a		asl a		                  ASL A
+.0105c5		0a		asl a		                  ASL A
+.0105c6		0a		asl a		                  ASL A
+.0105c7		0a		asl a		                  ASL A
+.0105c8		0a		asl a		                  ASL A
+.0105c9		0a		asl a		                  ASL A
+.0105ca		0a		asl a		                  ASL A
+.0105cb		0a		asl a		                  ASL A
+.0105cc		0a		asl a		                  ASL A
+.0105cd		0a		asl a		                  ASL A
+.0105ce		0a		asl a		                  ASL A ; get the 4 bit in the right position to be added to the LOW part
+.0105cf		8f 65 00 01	sta $010065	                  STA FAT32_FAT_Next_Entry
+.0105d3		af 61 00 01	lda $010061	                  LDA FAT32_FAT_Entry
+.0105d7		4a		lsr a		                  LSR A
+.0105d8		4a		lsr a		                  LSR A
+.0105d9		4a		lsr a		                  LSR A
+.0105da		4a		lsr a		                  LSR A ; divide the high part of the FAT entry requested by 16  because there is 16 FAt entry per sector
+.0105db		29 ff 0f	and #$0fff	                  AND #$0FFF
+.0105de		0f 65 00 01	ora $010065	                  ORA FAT32_FAT_Next_Entry
+.0105e2		8f 65 00 01	sta $010065	                  STA FAT32_FAT_Next_Entry ; Now contain the 32 bit FAT Cluster to load
+.0105e6						FAT32_ENTRY_SECTOR_LOCATION_FIND
+.0105e6		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry
+.0105ea		18		clc		                  CLC
+.0105eb		6f 59 00 01	adc $010059	                  ADC FAT32_FAT_Base_Sector
+.0105ef		cf 5d 00 01	cmp $01005d	                  CMP FAT32_FAT_Sector_loaded_in_ram
+.0105f3		f0 16		beq $01060b	                  BEQ FAT32_COMPUTED_OFSET_IN_CLUSTER ; dont need to load the fat sector because it's alreaddy loaded
+.0105f5		8f 5d 00 01	sta $01005d	                  STA FAT32_FAT_Sector_loaded_in_ram  ; update the cluster value
+.0105f9		a9 01 00	lda #$0001	                  LDA #`FAT32_FAT_ADDRESS_BUFFER_512 ; load the byte nb 3 (bank byte)
+.0105fc		48		pha		                  PHA
+.0105fd		a9 00 0a	lda #$0a00	                  LDA #<>FAT32_FAT_ADDRESS_BUFFER_512 ; load the low world part of the buffer address
+.010600		48		pha		                  PHA
+.010601		af 5d 00 01	lda $01005d	                  LDA FAT32_FAT_Sector_loaded_in_ram ; read the ROOT directory sector saved at the begining of the function
+.010605		22 43 07 01	jsl $010743	                  JSL IHDD_READ
+.010609		fa		plx		                  PLX
+.01060a		fa		plx		                  PLX
+.01060b						FAT32_COMPUTED_OFSET_IN_CLUSTER
+.01060b		af 61 00 01	lda $010061	                  LDA FAT32_FAT_Entry
+.01060f		29 0f 00	and #$000f	                  AND #$0F ; get only the 7 first byte to get the ofset in the curent FAT cluster loades
+.010612		0a		asl a		                  ASL
+.010613		0a		asl a		                  ASL ; *4 to point to the FAT entry 32 byte
+.010614		18		clc		                  CLC
+.010615		69 00 0a	adc #$0a00	                  ADC #<>FAT32_FAT_ADDRESS_BUFFER_512
+.010618		aa		tax		                  TAX
+.010619		a9 65 00	lda #$0065	                  LDA #<>FAT32_FAT_Next_Entry
+.01061c		a8		tay		                  TAY
+.01061d		a9 03 00	lda #$0003	                  LDA #3 ; read 4 byte
+.010620		54 01 01	mvn $01,$01	                  MVN `FAT32_FAT_Next_Entry,`FAT32_FAT_ADDRESS_BUFFER_512
+.010623		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry    ; FOR DEBUG
+.010627		af 67 00 01	lda $010067	                  LDA FAT32_FAT_Next_Entry+2  ; FOR DEBUG
+.01062b		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry    ; FOR DEBUG
+.01062f		af 67 00 01	lda $010067	                  LDA FAT32_FAT_Next_Entry+2  ; FOR DEBUG
+.010633		7a		ply		                  PLY
+.010634		fa		plx		                  PLX
+.010635		68		pla		                  PLA
+.010636		6b		rtl		                  RTL
+.010637						FAT32_Test_Fat_Entry_Validity
+.010637		68		pla		                  PLA
+.010638		af 67 00 01	lda $010067	                  LDA FAT32_FAT_Next_Entry +2 ; test for EOC (End Of Cluster)
+.01063c		29 ff 0f	and #$0fff	                  AND #$0FFF ; the 4 MSB are not used in the FAT32
+.01063f		c9 ff 0f	cmp #$0fff	                  CMP #$0FFF
+.010642		d0 30		bne $010674	                  BNE FAT32_Test_Fat_Entry_Validity___TEST_NULL_VALUE
+.010644		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; test for EOC (End Of Cluster)
+.010648		29 f0 ff	and #$fff0	                  AND #$FFF0
+.01064b		c9 f0 ff	cmp #$fff0	                  CMP #$FFF0
+.01064e		d0 24		bne $010674	                  BNE FAT32_Test_Fat_Entry_Validity___TEST_NULL_VALUE
+.010650		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; the cluster entry is not usable or its the last in the chaine
+.010654		29 0f 00	and #$000f	                  AND #$000F
+.010657		c9 08 00	cmp #$0008	                  CMP #8
+.01065a		30 05		bmi $010661	                  BMI FAT32_Test_Fat_Entry_Validity___NEXT_CLUSTER_RESERVED_OR_BAD
+.01065c		a9 ff ff	lda #$ffff	                  LDA #-1 ; end of the file
+.01065f		80 24		bra $010685	                  BRA FAT32_Test_Fat_Entry_Validity___EXIT
+.010661						FAT32_Test_Fat_Entry_Validity___NEXT_CLUSTER_RESERVED_OR_BAD
+.010661		c9 07 00	cmp #$0007	                  CMP #7
+.010664		d0 05		bne $01066b	                  BNE FAT32_Test_Fat_Entry_Validity___NEXT_CLUSTER_RESERVED
+.010666		a9 fe ff	lda #$fffe	                  LDA #-2 ; Bad sector
+.010669		80 1a		bra $010685	                  BRA FAT32_Test_Fat_Entry_Validity___EXIT
+.01066b						FAT32_Test_Fat_Entry_Validity___NEXT_CLUSTER_RESERVED
+.01066b		a9 fd ff	lda #$fffd	                  LDA #-3 ; reserved sector
+.01066e		80 15		bra $010685	                  BRA FAT32_Test_Fat_Entry_Validity___EXIT
+.010670		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; test for EOC (End Of Cluster)
+.010674						FAT32_Test_Fat_Entry_Validity___TEST_NULL_VALUE
+.010674		c9 00 00	cmp #$0000	                  CMP #0
+.010677		d0 0c		bne $010685	                  BNE FAT32_Test_Fat_Entry_Validity___EXIT
+.010679		af 67 00 01	lda $010067	                  LDA FAT32_FAT_Next_Entry + 2 ; test for EOC (End Of Cluster)
+.01067d		c9 00 00	cmp #$0000	                  CMP #0
+.010680		d0 03		bne $010685	                  BNE FAT32_Test_Fat_Entry_Validity___EXIT
+.010682		a9 fc ff	lda #$fffc	                  LDA #-4 ; empty sector
+.010685						FAT32_Test_Fat_Entry_Validity___EXIT
+.010685		48		pha		                  PHA
+.010686		6b		rtl		                  RTL
+.010687						FAT32_ILOAD_FILE
+.010687		22 46 03 01	jsl $010346	                  JSL IFAT32_READ_BOOT_SECTOR
+.01068b		c9 01 00	cmp #$0001	                  CMP #$0001
+.01068e		f0 05		beq $010695	                  BEQ ILOAD_FILE_FAT_32_BOOT_SECTOR_PARSING_OK
+.010690		a9 ff ff	lda #$ffff	                  LDA #-1
+.010693		80 4b		bra $0106e0	                  BRA FAT32_ILOAD_FILE_RETURN_ERROR_temp
+.010695						ILOAD_FILE_FAT_32_BOOT_SECTOR_PARSING_OK
+.010695		22 67 04 01	jsl $010467	                  JSL IFAT32_COMPUT_ROOT_DIR_POS
+.010699		c2 30		rep #$30	                REP #$30        ; set A&X long
+.01069b		a9 00 00	lda #$0000	                  LDA #$00 ; sellect the first entry
+.01069e		48		pha		                  PHA
+.01069f						FAT32_ILOAD_FILE_READ_NEXT_ROOT_ENTRY
+.01069f		22 1c 05 01	jsl $01051c	                  JSL IFAT32_GET_ROOT_ENTRY
+.0106a3		af 44 00 01	lda $010044	                  LDA FAT32_Root_entry_value + 11 ; get the flag Byte to test if it a file or a directory
+.0106a7		29 10 00	and #$0010	                  AND #$10
+.0106aa		c9 10 00	cmp #$0010	                  CMP #$10
+.0106ad		d0 0b		bne $0106ba	                  BNE FAT32_ILOAD_FILE_ENTRY ; if equal we read a directory so just read the next one
+.0106af						FAT32_ILOAD_FILE_STRING_NOT_MATCHED
+.0106af		68		pla		                  PLA   ; get the actual root entry
+.0106b0		cf 08 00 01	cmp $010008	                  CMP FAT32_Max_Root_Entry ; prevent to loop forever so exit
+.0106b4		f0 26		beq $0106dc	                  BEQ FAT32_ILOAD_FILE_NO_FILE_MATCHED
+.0106b6		1a		inc a		                  INC A ; sellect the next root entry
+.0106b7		48		pha		                  PHA   ; save the next root entry to read
+.0106b8		80 e5		bra $01069f	                  BRA FAT32_ILOAD_FILE_READ_NEXT_ROOT_ENTRY
+.0106ba						FAT32_ILOAD_FILE_ENTRY
+.0106ba		c2 30		rep #$30	                REP #$30        ; set A&X long
+.0106bc		68		pla		                  PLA   ; get the actual root entry
+.0106bd		cf 08 90 01	cmp $019008	                  CMP Max_Root_Entry ; prevent to loop forever so exit
+.0106c1		f0 19		beq $0106dc	                  BEQ FAT32_ILOAD_FILE_NO_FILE_MATCHED
+.0106c3		1a		inc a		                  INC A ; sellect the next root entry
+.0106c4		48		pha		                  PHA   ; save the next root entry to read
+.0106c5		a2 ff ff	ldx #$ffff	                  LDX #-1
+.0106c8		a0 ff ff	ldy #$ffff	                  LDY #-1
+.0106cb						FAT32_ILOAD_FILE_CHAR_MATCHING
+.0106cb		e8		inx		                  INC X
+.0106cc		c8		iny		                  INC Y
+.0106cd		e0 0b 00	cpx #$000b	                  CPX #11 ; FAT12 file or folder size
+.0106d0		f0 10		beq $0106e2	                  BEQ FAT32_ILOAD_FILE_STRING_MATCHED
+.0106d2		b3 06		lda ($06,s),y	                  LDA (6,S),Y ; load the "y" char file name we want to read
+.0106d4		df 39 00 01	cmp $010039,x	                  CMP FAT32_Root_entry_value,X
+.0106d8		f0 f1		beq $0106cb	                  BEQ FAT32_ILOAD_FILE_CHAR_MATCHING
+.0106da		80 d3		bra $0106af	                  BRA FAT32_ILOAD_FILE_STRING_NOT_MATCHED
+.0106dc						FAT32_ILOAD_FILE_NO_FILE_MATCHED
+.0106dc		68		pla		                  PLA
+.0106dd		a9 fe ff	lda #$fffe	                  LDA #-2
+.0106e0						FAT32_ILOAD_FILE_RETURN_ERROR_temp
+.0106e0		80 60		bra $010742	                  BRA FAT32_ILOAD_FILE_RETURN_ERROR
+.0106e2						FAT32_ILOAD_FILE_STRING_MATCHED
+.0106e2		68		pla		                  PLA
+.0106e3		af 53 00 01	lda $010053	                  LDA FAT32_Root_entry_value + 26 ; get the first fat entry for the fil from the root directory entry we matched
+.0106e7		8f 65 00 01	sta $010065	                  STA FAT32_FAT_Next_Entry
+.0106eb						FAT32_ILOAD_FILE_Read_next_sector
+.0106eb		a3 0a		lda $0a,s	                  LDA 10,S ; load the byte nb 3 (bank byte)
+.0106ed		48		pha		                  PHA
+.0106ee		a3 0c		lda $0c,s	                  LDA 12,S ; load the low world part of the buffer address
+.0106f0		48		pha		                  PHA
+.0106f1		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; sector to read
+.0106f5		69 21 00	adc #$0021	                  ADC #1+9+9+14 ; skip the reserved sector ,  the 2 fat and the root sector
+.0106f8		22 43 07 01	jsl $010743	                  JSL IHDD_READ
+.0106fc		fa		plx		                  PLX
+.0106fd		fa		plx		                  PLX
+.0106fe		a3 0c		lda $0c,s	                  LDA 12,S ; load the low world part of the buffer address
+.010700		18		clc		                  CLC
+.010701		a9 00 00	lda #$0000	                  LDA #0
+.010704		48		pha		                  PHA ; save the conter vaue
+.010705		48		pha		                  PHA ; save the
+.010706						FAT32_ILOAD_FILE_Add_More_Sector_Per_Cluster
+.010706		a3 04		lda $04,s	                  LDA 4,S ; load the Byte per cluster value
+.010708		6f 00 00 01	adc $010000	                  ADC FAT32_Byte_Per_Sector
+.01070c		83 04		sta $04,s	                  STA 4,S
+.01070e		af 02 00 01	lda $010002	                  LDA FAT32_Sector_Per_Cluster
+.010712		c3 02		cmp $02,s	                  CMP 2,S
+.010714		f0 07		beq $01071d	                  BEQ FAT32_ILOAD_FILE_Read_Next_Data
+.010716		a3 02		lda $02,s	                  LDA 2,S
+.010718		1a		inc a		                  INC A
+.010719		83 02		sta $02,s	                  STA 2,S
+.01071b		80 e9		bra $010706	                  BRA FAT32_ILOAD_FILE_Add_More_Sector_Per_Cluster
+.01071d						FAT32_ILOAD_FILE_Read_Next_Data
+.01071d		fa		plx		                  PLX ; removing the compter valuer from the stack
+.01071e		a3 0e		lda $0e,s	                  LDA 14,S ; load the low world part of the buffer address
+.010720		18		clc		                  CLC
+.010721		63 02		adc $02,s	                  ADC 2,S
+.010723		90 09		bcc $01072e	                  BCC FAT32_ILOAD_FILE_New_Buiffer_Address_computed
+.010725		83 0e		sta $0e,s	                  STA 14,S ; Save the low world part of the buffer address
+.010727		a3 0c		lda $0c,s	                  LDA 12,S ; load the byte nb 3 (bank byte)
+.010729		69 01 00	adc #$0001	                  ADC #1
+.01072c		83 0c		sta $0c,s	                  STA 12,S ; Save the byte nb 3 (bank byte)
+.01072e						FAT32_ILOAD_FILE_New_Buiffer_Address_computed
+.01072e		fa		plx		                  PLX ; get the Byte per cluster count out of the stack
+.01072f		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry ; sector to read
+.010733		22 91 05 01	jsl $010591	                  JSL FAT32_IFAT_GET_FAT_ENTRY
+.010737		af 65 00 01	lda $010065	                  LDA FAT32_FAT_Next_Entry
+.01073b		c9 fe 0f	cmp #$0ffe	                  CMP #$FFE
+.01073e		b0 02		bcs $010742	                  BCS FAT32_ILOAD_FILE_END_OF_FILE
+.010740		80 a9		bra $0106eb	                  BRA FAT32_ILOAD_FILE_Read_next_sector
+.010742						FAT32_ILOAD_FILE_END_OF_FILE
+.010742						FAT32_ILOAD_FILE_RETURN_ERROR
+.010742		6b		rtl		                  RTL
+.010743						IHDD_READ
+.010743		c2 30		rep #$30	                REP #$30        ; set A&X long
+.010745		48		pha		                PHA ; save the sector to read
+.010746		a3 08		lda $08,s	                LDA 8,S
+.010748		a8		tay		                TAY
+.010749		a3 06		lda $06,s	                LDA 6,S
+.01074b		a8		tay		                TAY
+.01074c		68		pla		                PLA
+.01074d		48		pha		                PHA ; save the sector read for the return value
+.01074e		0a		asl a		                ASL A ; convert the sector number into byte count
+.01074f		0a		asl a		                ASL A
+.010750		0a		asl a		                ASL A
+.010751		0a		asl a		                ASL A
+.010752		0a		asl a		                ASL A
+.010753		0a		asl a		                ASL A
+.010754		0a		asl a		                ASL A
+.010755		0a		asl a		                ASL A
+.010756		0a		asl a		                ASL A
+.010757		69 00 20	adc #$2000	                ADC #<>data_hard_drive
+.01075a		aa		tax		                TAX
+.01075b		e2 20		sep #$20	                SEP #$20        ; set A short
+.01075d		a3 08		lda $08,s	                LDA 8,S
+.01075f		8f 6a 07 01	sta $01076a	                STA HDD_MVN_INSTRUCTION_ADDRESS + 2 ; rewrite the second parameter of the instruction in RAM
+.010763		c2 30		rep #$30	                REP #$30        ; set A&X long
+.010765		a9 ff 01	lda #$01ff	                LDA #511
+.010768		54 01 01	mvn $01,$01	HDD_MVN_INSTRUCTION_ADDRESS  MVN `FAT32_DATA_ADDRESS_BUFFER_512,`data_hard_drive
+.01076b		68		pla		                PLA
+.01076c		6b		rtl		                RTL
 >020425		50 61 72 74 69 74 69 6f		Partition_ofset_text    .text "Partition ofset (in cluster) : "
 >02042d		6e 20 6f 66 73 65 74 20 28 69 6e 20 63 6c 75 73
 >02043d		74 65 72 29 20 3a 20
@@ -10478,45 +10686,45 @@
 >016fe0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 >016fe8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 >016ff8		00 00 00 00 00 00 00 00
->017000		e5 6d 00 65 00 6e 00 74		.text $E5,$6D,$00,$65,$00,$6E,$00,$74,$00,$2E,$00,$0F,$00,$9F,$74,$00,$78,$00,$74,$00,$00,$00,$FF,$FF,$FF,$FF,$00,$00,$FF,$FF,$FF,$FF
->017008		00 2e 00 0f 00 9f 74 00 78 00 74 00 00 00 ff ff
->017018		ff ff 00 00 ff ff ff ff
->017020		e5 4e 00 65 00 77 00 20		.text $E5,$4E,$00,$65,$00,$77,$00,$20,$00,$54,$00,$0F,$00,$9F,$65,$00,$78,$00,$74,$00,$20,$00,$44,$00,$6F,$00,$00,$00,$63,$00,$75,$00
->017028		00 54 00 0f 00 9f 65 00 78 00 74 00 20 00 44 00
->017038		6f 00 00 00 63 00 75 00
->017040		e5 45 57 54 45 58 7e 31		.text $E5,$45,$57,$54,$45,$58,$7E,$31,$54,$58,$54,$20,$00,$A8,$34,$7E,$28,$4F,$28,$4F,$00,$00,$35,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
->017048		54 58 54 20 00 a8 34 7e 28 4f 28 4f 00 00 35 7e
->017058		28 4f 00 00 00 00 00 00
->017060		41 74 00 65 00 78 00 74		.text $41,$74,$00,$65,$00,$78,$00,$74,$00,$5F,$00,$0F,$00,$D6,$74,$00,$65,$00,$73,$00,$74,$00,$2E,$00,$74,$00,$00,$00,$78,$00,$74,$00
->017068		00 5f 00 0f 00 d6 74 00 65 00 73 00 74 00 2e 00
->017078		74 00 00 00 78 00 74 00
->017080		54 45 58 54 5f 54 7e 31		.text $54,$45,$58,$54,$5F,$54,$7E,$31,$54,$58,$54,$20,$00,$A8,$34,$7E,$28,$4F,$28,$4F,$00,$00,$98,$7E,$28,$4F,$03,$00,$00,$1A,$00,$00
->017088		54 58 54 20 00 a8 34 7e 28 4f 28 4f 00 00 98 7e
->017098		28 4f 03 00 00 1a 00 00
->0170a0		e5 6d 00 65 00 6e 00 74		.text $E5,$6D,$00,$65,$00,$6E,$00,$74,$00,$2E,$00,$0F,$00,$9F,$74,$00,$78,$00,$74,$00,$00,$00,$FF,$FF,$FF,$FF,$00,$00,$FF,$FF,$FF,$FF
->0170a8		00 2e 00 0f 00 9f 74 00 78 00 74 00 00 00 ff ff
->0170b8		ff ff 00 00 ff ff ff ff
->0170c0		e5 4e 00 65 00 77 00 20		.text $E5,$4E,$00,$65,$00,$77,$00,$20,$00,$54,$00,$0F,$00,$9F,$65,$00,$78,$00,$74,$00,$20,$00,$44,$00,$6F,$00,$00,$00,$63,$00,$75,$00
->0170c8		00 54 00 0f 00 9f 65 00 78 00 74 00 20 00 44 00
->0170d8		6f 00 00 00 63 00 75 00
->0170e0		e5 45 57 54 45 58 7e 31		.text $E5,$45,$57,$54,$45,$58,$7E,$31,$54,$58,$54,$20,$00,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$9C,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
->0170e8		54 58 54 20 00 c7 9b 7e 28 4f 28 4f 00 00 9c 7e
->0170f8		28 4f 00 00 00 00 00 00
->017100		53 44 46 47 56 47 48 20		.text $53,$44,$46,$47,$56,$47,$48,$20,$54,$58,$54,$20,$18,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$9C,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
->017108		54 58 54 20 18 c7 9b 7e 28 4f 28 4f 00 00 9c 7e
->017118		28 4f 00 00 00 00 00 00
->017120		e5 6d 00 65 00 6e 00 74		.text $E5,$6D,$00,$65,$00,$6E,$00,$74,$00,$2E,$00,$0F,$00,$9F,$74,$00,$78,$00,$74,$00,$00,$00,$FF,$FF,$FF,$FF,$00,$00,$FF,$FF,$FF,$FF
->017128		00 2e 00 0f 00 9f 74 00 78 00 74 00 00 00 ff ff
->017138		ff ff 00 00 ff ff ff ff
->017140		e5 4e 00 65 00 77 00 20		.text $E5,$4E,$00,$65,$00,$77,$00,$20,$00,$54,$00,$0F,$00,$9F,$65,$00,$78,$00,$74,$00,$20,$00,$44,$00,$6F,$00,$00,$00,$63,$00,$75,$00
->017148		00 54 00 0f 00 9f 65 00 78 00 74 00 20 00 44 00
->017158		6f 00 00 00 63 00 75 00
->017160		e5 45 57 54 45 58 7e 31		.text $E5,$45,$57,$54,$45,$58,$7E,$31,$54,$58,$54,$20,$00,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$A1,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
->017168		54 58 54 20 00 c7 9b 7e 28 4f 28 4f 00 00 a1 7e
->017178		28 4f 00 00 00 00 00 00
->017180		48 4a 4b 20 20 20 20 20		.text $48,$4A,$4B,$20,$20,$20,$20,$20,$54,$58,$54,$20,$18,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$A5,$7E,$28,$4F,$10,$00,$1B,$00,$00,$00
->017188		54 58 54 20 18 c7 9b 7e 28 4f 28 4f 00 00 a5 7e
->017198		28 4f 10 00 1b 00 00 00
+>017000		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017008		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017018		00 00 00 00 00 00 00 00
+>017020		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017028		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017038		00 00 00 00 00 00 00 00
+>017040		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017048		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017058		00 00 00 00 00 00 00 00
+>017060		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017068		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017078		00 00 00 00 00 00 00 00
+>017080		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017088		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017098		00 00 00 00 00 00 00 00
+>0170a0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0170a8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0170b8		00 00 00 00 00 00 00 00
+>0170c0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0170c8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0170d8		00 00 00 00 00 00 00 00
+>0170e0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0170e8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0170f8		00 00 00 00 00 00 00 00
+>017100		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017108		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017118		00 00 00 00 00 00 00 00
+>017120		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017128		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017138		00 00 00 00 00 00 00 00
+>017140		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017148		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017158		00 00 00 00 00 00 00 00
+>017160		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017168		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017178		00 00 00 00 00 00 00 00
+>017180		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017188		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017198		00 00 00 00 00 00 00 00
 >0171a0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 >0171a8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 >0171b8		00 00 00 00 00 00 00 00
@@ -10526,102 +10734,102 @@
 >0171e0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
 >0171e8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 >0171f8		00 00 00 00 00 00 00 00
->017200		31 32 33 34 30 30 30 30		.text $31,$32,$33,$34,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017208		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017218		30 30 30 30 30 30 30 30
->017220		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017228		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017238		30 30 30 30 30 30 30 30
->017240		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017248		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017258		30 30 30 30 30 30 30 30
->017260		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017268		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017278		30 30 30 30 30 30 30 30
->017280		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017288		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017298		30 30 30 30 30 30 30 30
->0172a0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0172a8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0172b8		30 30 30 30 30 30 30 30
->0172c0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0172c8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0172d8		30 30 30 30 30 30 30 30
->0172e0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0172e8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0172f8		30 30 30 30 30 30 30 30
->017300		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017308		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017318		30 30 30 30 30 30 30 30
->017320		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017328		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017338		30 30 30 30 30 30 30 30
->017340		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017348		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017358		30 30 30 30 30 30 30 30
->017360		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017368		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017378		30 30 30 30 30 30 30 30
->017380		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017388		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017398		30 30 30 30 30 30 30 30
->0173a0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0173a8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0173b8		30 30 30 30 30 30 30 30
->0173c0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0173c8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0173d8		30 30 30 30 30 30 30 30
->0173e0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$35,$36,$37,$38
->0173e8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0173f8		30 30 30 30 35 36 37 38
->017400		31 32 33 34 30 30 30 30		.text $31,$32,$33,$34,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017408		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017418		30 30 30 30 30 30 30 30
->017420		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017428		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017438		30 30 30 30 30 30 30 30
->017440		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017448		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017458		30 30 30 30 30 30 30 30
->017460		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017468		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017478		30 30 30 30 30 30 30 30
->017480		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017488		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017498		30 30 30 30 30 30 30 30
->0174a0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0174a8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0174b8		30 30 30 30 30 30 30 30
->0174c0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0174c8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0174d8		30 30 30 30 30 30 30 30
->0174e0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0174e8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0174f8		30 30 30 30 30 30 30 30
->017500		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017508		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017518		30 30 30 30 30 30 30 30
->017520		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017528		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017538		30 30 30 30 30 30 30 30
->017540		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017548		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017558		30 30 30 30 30 30 30 30
->017560		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017568		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017578		30 30 30 30 30 30 30 30
->017580		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->017588		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->017598		30 30 30 30 30 30 30 30
->0175a0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0175a8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0175b8		30 30 30 30 30 30 30 30
->0175c0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
->0175c8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0175d8		30 30 30 30 30 30 30 30
->0175e0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$35,$36,$37,$38
->0175e8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
->0175f8		30 30 30 30 35 36 37 38
+>017200		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017208		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017218		00 00 00 00 00 00 00 00
+>017220		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017228		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017238		00 00 00 00 00 00 00 00
+>017240		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017248		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017258		00 00 00 00 00 00 00 00
+>017260		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017268		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017278		00 00 00 00 00 00 00 00
+>017280		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017288		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017298		00 00 00 00 00 00 00 00
+>0172a0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0172a8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0172b8		00 00 00 00 00 00 00 00
+>0172c0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0172c8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0172d8		00 00 00 00 00 00 00 00
+>0172e0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0172e8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0172f8		00 00 00 00 00 00 00 00
+>017300		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017308		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017318		00 00 00 00 00 00 00 00
+>017320		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017328		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017338		00 00 00 00 00 00 00 00
+>017340		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017348		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017358		00 00 00 00 00 00 00 00
+>017360		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017368		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017378		00 00 00 00 00 00 00 00
+>017380		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>017388		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>017398		00 00 00 00 00 00 00 00
+>0173a0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0173a8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0173b8		00 00 00 00 00 00 00 00
+>0173c0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0173c8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0173d8		00 00 00 00 00 00 00 00
+>0173e0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0173e8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0173f8		00 00 00 00 00 00 00 00
+>017400		e5 6d 00 65 00 6e 00 74		.text $E5,$6D,$00,$65,$00,$6E,$00,$74,$00,$2E,$00,$0F,$00,$9F,$74,$00,$78,$00,$74,$00,$00,$00,$FF,$FF,$FF,$FF,$00,$00,$FF,$FF,$FF,$FF
+>017408		00 2e 00 0f 00 9f 74 00 78 00 74 00 00 00 ff ff
+>017418		ff ff 00 00 ff ff ff ff
+>017420		e5 4e 00 65 00 77 00 20		.text $E5,$4E,$00,$65,$00,$77,$00,$20,$00,$54,$00,$0F,$00,$9F,$65,$00,$78,$00,$74,$00,$20,$00,$44,$00,$6F,$00,$00,$00,$63,$00,$75,$00
+>017428		00 54 00 0f 00 9f 65 00 78 00 74 00 20 00 44 00
+>017438		6f 00 00 00 63 00 75 00
+>017440		e5 45 57 54 45 58 7e 31		.text $E5,$45,$57,$54,$45,$58,$7E,$31,$54,$58,$54,$20,$00,$A8,$34,$7E,$28,$4F,$28,$4F,$00,$00,$35,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
+>017448		54 58 54 20 00 a8 34 7e 28 4f 28 4f 00 00 35 7e
+>017458		28 4f 00 00 00 00 00 00
+>017460		41 74 00 65 00 78 00 74		.text $41,$74,$00,$65,$00,$78,$00,$74,$00,$5F,$00,$0F,$00,$D6,$74,$00,$65,$00,$73,$00,$74,$00,$2E,$00,$74,$00,$00,$00,$78,$00,$74,$00
+>017468		00 5f 00 0f 00 d6 74 00 65 00 73 00 74 00 2e 00
+>017478		74 00 00 00 78 00 74 00
+>017480		54 45 58 54 5f 54 7e 31		.text $54,$45,$58,$54,$5F,$54,$7E,$31,$54,$58,$54,$20,$00,$A8,$34,$7E,$28,$4F,$28,$4F,$00,$00,$98,$7E,$28,$4F,$03,$00,$00,$00,$00,$00
+>017488		54 58 54 20 00 a8 34 7e 28 4f 28 4f 00 00 98 7e
+>017498		28 4f 03 00 00 00 00 00
+>0174a0		e5 6d 00 65 00 6e 00 74		.text $E5,$6D,$00,$65,$00,$6E,$00,$74,$00,$2E,$00,$0F,$00,$9F,$74,$00,$78,$00,$74,$00,$00,$00,$FF,$FF,$FF,$FF,$00,$00,$FF,$FF,$FF,$FF
+>0174a8		00 2e 00 0f 00 9f 74 00 78 00 74 00 00 00 ff ff
+>0174b8		ff ff 00 00 ff ff ff ff
+>0174c0		e5 4e 00 65 00 77 00 20		.text $E5,$4E,$00,$65,$00,$77,$00,$20,$00,$54,$00,$0F,$00,$9F,$65,$00,$78,$00,$74,$00,$20,$00,$44,$00,$6F,$00,$00,$00,$63,$00,$75,$00
+>0174c8		00 54 00 0f 00 9f 65 00 78 00 74 00 20 00 44 00
+>0174d8		6f 00 00 00 63 00 75 00
+>0174e0		e5 45 57 54 45 58 7e 31		.text $E5,$45,$57,$54,$45,$58,$7E,$31,$54,$58,$54,$20,$00,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$9C,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
+>0174e8		54 58 54 20 00 c7 9b 7e 28 4f 28 4f 00 00 9c 7e
+>0174f8		28 4f 00 00 00 00 00 00
+>017500		53 44 46 47 56 47 48 20		.text $53,$44,$46,$47,$56,$47,$48,$20,$54,$58,$54,$20,$18,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$9C,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
+>017508		54 58 54 20 18 c7 9b 7e 28 4f 28 4f 00 00 9c 7e
+>017518		28 4f 00 00 00 00 00 00
+>017520		e5 6d 00 65 00 6e 00 74		.text $E5,$6D,$00,$65,$00,$6E,$00,$74,$00,$2E,$00,$0F,$00,$9F,$74,$00,$78,$00,$74,$00,$00,$00,$FF,$FF,$FF,$FF,$00,$00,$FF,$FF,$FF,$FF
+>017528		00 2e 00 0f 00 9f 74 00 78 00 74 00 00 00 ff ff
+>017538		ff ff 00 00 ff ff ff ff
+>017540		e5 4e 00 65 00 77 00 20		.text $E5,$4E,$00,$65,$00,$77,$00,$20,$00,$54,$00,$0F,$00,$9F,$65,$00,$78,$00,$74,$00,$20,$00,$44,$00,$6F,$00,$00,$00,$63,$00,$75,$00
+>017548		00 54 00 0f 00 9f 65 00 78 00 74 00 20 00 44 00
+>017558		6f 00 00 00 63 00 75 00
+>017560		e5 45 57 54 45 58 7e 31		.text $E5,$45,$57,$54,$45,$58,$7E,$31,$54,$58,$54,$20,$00,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$A1,$7E,$28,$4F,$00,$00,$00,$00,$00,$00
+>017568		54 58 54 20 00 c7 9b 7e 28 4f 28 4f 00 00 a1 7e
+>017578		28 4f 00 00 00 00 00 00
+>017580		48 4a 4b 20 20 20 20 20		.text $48,$4A,$4B,$20,$20,$20,$20,$20,$54,$58,$54,$20,$18,$C7,$9B,$7E,$28,$4F,$28,$4F,$00,$00,$A5,$7E,$28,$4F,$10,$00,$1B,$00,$00,$00
+>017588		54 58 54 20 18 c7 9b 7e 28 4f 28 4f 00 00 a5 7e
+>017598		28 4f 10 00 1b 00 00 00
+>0175a0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0175a8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0175b8		00 00 00 00 00 00 00 00
+>0175c0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0175c8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0175d8		00 00 00 00 00 00 00 00
+>0175e0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0175e8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0175f8		00 00 00 00 00 00 00 00
 >017600		31 32 33 34 30 30 30 30		.text $31,$32,$33,$34,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
 >017608		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
 >017618		30 30 30 30 30 30 30 30
@@ -11150,54 +11358,150 @@
 >018be0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$35,$36,$37,$38
 >018be8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
 >018bf8		30 30 30 30 35 36 37 38
->018c00		63 76 6e 63 62 6e 62 63		.text $63,$76,$6E,$63,$62,$6E,$62,$63,$6E,$63,$76,$62,$6E,$78,$20,$63,$76,$68,$6A,$20,$6E,$0D,$0A,$0D,$0A,$66,$67,$00,$00,$00,$00,$00
->018c08		6e 63 76 62 6e 78 20 63 76 68 6a 20 6e 0d 0a 0d
->018c18		0a 66 67 00 00 00 00 00
->018c20		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018c28		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018c38		00 00 00 00 00 00 00 00
->018c40		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018c48		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018c58		00 00 00 00 00 00 00 00
->018c60		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018c68		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018c78		00 00 00 00 00 00 00 00
->018c80		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018c88		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018c98		00 00 00 00 00 00 00 00
->018ca0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018ca8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018cb8		00 00 00 00 00 00 00 00
->018cc0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018cc8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018cd8		00 00 00 00 00 00 00 00
->018ce0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018ce8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018cf8		00 00 00 00 00 00 00 00
->018d00		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018d08		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018d18		00 00 00 00 00 00 00 00
->018d20		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018d28		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018d38		00 00 00 00 00 00 00 00
->018d40		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018d48		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018d58		00 00 00 00 00 00 00 00
->018d60		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018d68		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018d78		00 00 00 00 00 00 00 00
->018d80		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018d88		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018d98		00 00 00 00 00 00 00 00
->018da0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018da8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018db8		00 00 00 00 00 00 00 00
->018dc0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018dc8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018dd8		00 00 00 00 00 00 00 00
->018de0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
->018de8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
->018df8		00 00 00 00 00 00 00 00
+>018c00		31 32 33 34 30 30 30 30		.text $31,$32,$33,$34,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018c08		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018c18		30 30 30 30 30 30 30 30
+>018c20		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018c28		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018c38		30 30 30 30 30 30 30 30
+>018c40		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018c48		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018c58		30 30 30 30 30 30 30 30
+>018c60		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018c68		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018c78		30 30 30 30 30 30 30 30
+>018c80		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018c88		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018c98		30 30 30 30 30 30 30 30
+>018ca0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018ca8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018cb8		30 30 30 30 30 30 30 30
+>018cc0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018cc8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018cd8		30 30 30 30 30 30 30 30
+>018ce0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018ce8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018cf8		30 30 30 30 30 30 30 30
+>018d00		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018d08		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018d18		30 30 30 30 30 30 30 30
+>018d20		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018d28		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018d38		30 30 30 30 30 30 30 30
+>018d40		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018d48		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018d58		30 30 30 30 30 30 30 30
+>018d60		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018d68		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018d78		30 30 30 30 30 30 30 30
+>018d80		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018d88		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018d98		30 30 30 30 30 30 30 30
+>018da0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018da8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018db8		30 30 30 30 30 30 30 30
+>018dc0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018dc8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018dd8		30 30 30 30 30 30 30 30
+>018de0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$35,$36,$37,$38
+>018de8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018df8		30 30 30 30 35 36 37 38
+>018e00		31 32 33 34 30 30 30 30		.text $31,$32,$33,$34,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018e08		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018e18		30 30 30 30 30 30 30 30
+>018e20		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018e28		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018e38		30 30 30 30 30 30 30 30
+>018e40		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018e48		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018e58		30 30 30 30 30 30 30 30
+>018e60		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018e68		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018e78		30 30 30 30 30 30 30 30
+>018e80		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018e88		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018e98		30 30 30 30 30 30 30 30
+>018ea0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018ea8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018eb8		30 30 30 30 30 30 30 30
+>018ec0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018ec8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018ed8		30 30 30 30 30 30 30 30
+>018ee0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018ee8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018ef8		30 30 30 30 30 30 30 30
+>018f00		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018f08		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018f18		30 30 30 30 30 30 30 30
+>018f20		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018f28		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018f38		30 30 30 30 30 30 30 30
+>018f40		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018f48		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018f58		30 30 30 30 30 30 30 30
+>018f60		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018f68		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018f78		30 30 30 30 30 30 30 30
+>018f80		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018f88		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018f98		30 30 30 30 30 30 30 30
+>018fa0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018fa8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018fb8		30 30 30 30 30 30 30 30
+>018fc0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30
+>018fc8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018fd8		30 30 30 30 30 30 30 30
+>018fe0		30 30 30 30 30 30 30 30		.text $30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$30,$35,$36,$37,$38
+>018fe8		30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30
+>018ff8		30 30 30 30 35 36 37 38
+>019000		63 76 6e 63 62 6e 62 63		.text $63,$76,$6E,$63,$62,$6E,$62,$63,$6E,$63,$76,$62,$6E,$78,$20,$63,$76,$68,$6A,$20,$6E,$0D,$0A,$0D,$0A,$66,$67,$00,$00,$00,$00,$00
+>019008		6e 63 76 62 6e 78 20 63 76 68 6a 20 6e 0d 0a 0d
+>019018		0a 66 67 00 00 00 00 00
+>019020		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019028		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019038		00 00 00 00 00 00 00 00
+>019040		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019048		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019058		00 00 00 00 00 00 00 00
+>019060		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019068		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019078		00 00 00 00 00 00 00 00
+>019080		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019088		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019098		00 00 00 00 00 00 00 00
+>0190a0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0190a8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0190b8		00 00 00 00 00 00 00 00
+>0190c0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0190c8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0190d8		00 00 00 00 00 00 00 00
+>0190e0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0190e8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0190f8		00 00 00 00 00 00 00 00
+>019100		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019108		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019118		00 00 00 00 00 00 00 00
+>019120		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019128		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019138		00 00 00 00 00 00 00 00
+>019140		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019148		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019158		00 00 00 00 00 00 00 00
+>019160		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019168		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019178		00 00 00 00 00 00 00 00
+>019180		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>019188		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>019198		00 00 00 00 00 00 00 00
+>0191a0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0191a8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0191b8		00 00 00 00 00 00 00 00
+>0191c0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0191c8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0191d8		00 00 00 00 00 00 00 00
+>0191e0		00 00 00 00 00 00 00 00		.text $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+>0191e8		00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+>0191f8		00 00 00 00 00 00 00 00
 
 ;******  Return to file: FAT32.asm
 
@@ -11243,301 +11547,301 @@
 
 ;******  Return to file: LPT.asm
 
-.018e00						LPT_DATA
->018e00		00				LPT_Temp_data       .text $0
-.018e01						IECP_SET_HostClk_LINE_LOW
-.018e01		08		php		                  PHP
-.018e02		0b		phd		                  PHD
-.018e03		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e05		48		pha		                PHA             ; begin setdbr macro
-.018e06		08		php		                PHP
-.018e07		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e09		a9 af		lda #$af		LDA #`ECP_DCR
-.018e0b		48		pha		                PHA
-.018e0c		ab		plb		                PLB
-.018e0d		28		plp		                PLP
-.018e0e		68		pla		                PLA             ; end setdbr macro
-.018e0f		a9 01		lda #$01	                  LDA #$1
-.018e11		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
-.018e14		2b		pld		                  PLD
-.018e15		28		plp		                  PLP
-.018e16		6b		rtl		                  RTL
-.018e17						IECP_SET_HostClk_LINE_HIGH
-.018e17		08		php		                  PHP
-.018e18		0b		phd		                  PHD
-.018e19		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e1b		48		pha		                PHA             ; begin setdbr macro
-.018e1c		08		php		                PHP
-.018e1d		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e1f		a9 af		lda #$af		LDA #`ECP_DCR
-.018e21		48		pha		                PHA
-.018e22		ab		plb		                PLB
-.018e23		28		plp		                PLP
-.018e24		68		pla		                PLA             ; end setdbr macro
-.018e25		a9 01		lda #$01	                  LDA #$1
-.018e27		1c 7a 13	trb $af137a	                  TRB ECP_DCR
-.018e2a		2b		pld		                  PLD
-.018e2b		28		plp		                  PLP
-.018e2c		6b		rtl		                  RTL
-.018e2d						IECP_SET_HostAck_LINE_LOW
-.018e2d		08		php		                  PHP
-.018e2e		0b		phd		                  PHD
-.018e2f		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e31		48		pha		                PHA             ; begin setdbr macro
-.018e32		08		php		                PHP
-.018e33		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e35		a9 af		lda #$af		LDA #`ECP_DCR
-.018e37		48		pha		                PHA
-.018e38		ab		plb		                PLB
-.018e39		28		plp		                PLP
-.018e3a		68		pla		                PLA             ; end setdbr macro
-.018e3b		a9 02		lda #$02	                  LDA #$2
-.018e3d		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
-.018e40		2b		pld		                  PLD
-.018e41		28		plp		                  PLP
-.018e42		6b		rtl		                  RTL
-.018e43						IECP_SET_HostAck_LINE_HIGH
-.018e43		08		php		                  PHP
-.018e44		0b		phd		                  PHD
-.018e45		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e47		48		pha		                PHA             ; begin setdbr macro
-.018e48		08		php		                PHP
-.018e49		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e4b		a9 af		lda #$af		LDA #`ECP_DCR
-.018e4d		48		pha		                PHA
-.018e4e		ab		plb		                PLB
-.018e4f		28		plp		                PLP
-.018e50		68		pla		                PLA             ; end setdbr macro
-.018e51		a9 02		lda #$02	                  LDA #$2
-.018e53		1c 7a 13	trb $af137a	                  TRB ECP_DCR
-.018e56		2b		pld		                  PLD
-.018e57		28		plp		                  PLP
-.018e58		6b		rtl		                  RTL
-.018e59						IECP_SET_nReverseRequest_LINE_HIGH
-.018e59		08		php		                  PHP
-.018e5a		0b		phd		                  PHD
-.018e5b		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e5d		48		pha		                PHA             ; begin setdbr macro
-.018e5e		08		php		                PHP
-.018e5f		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e61		a9 af		lda #$af		LDA #`ECP_DCR
-.018e63		48		pha		                PHA
-.018e64		ab		plb		                PLB
-.018e65		28		plp		                PLP
-.018e66		68		pla		                PLA             ; end setdbr macro
-.018e67		a9 04		lda #$04	                  LDA #$4
-.018e69		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
-.018e6c		2b		pld		                  PLD
-.018e6d		28		plp		                  PLP
-.018e6e		6b		rtl		                  RTL
-.018e6f						IECP_SET_nReverseRequest_LINE_LOW
-.018e6f		08		php		                  PHP
-.018e70		0b		phd		                  PHD
-.018e71		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e73		48		pha		                PHA             ; begin setdbr macro
-.018e74		08		php		                PHP
-.018e75		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e77		a9 af		lda #$af		LDA #`ECP_DCR
-.018e79		48		pha		                PHA
-.018e7a		ab		plb		                PLB
-.018e7b		28		plp		                PLP
-.018e7c		68		pla		                PLA             ; end setdbr macro
-.018e7d		a9 04		lda #$04	                  LDA #$4
-.018e7f		1c 7a 13	trb $af137a	                  TRB ECP_DCR
-.018e82		2b		pld		                  PLD
-.018e83		28		plp		                  PLP
-.018e84		6b		rtl		                  RTL
-.018e85						IECP_SET_ECPMode_LINE_LOW
-.018e85		08		php		                  PHP
-.018e86		0b		phd		                  PHD
-.018e87		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e89		48		pha		                PHA             ; begin setdbr macro
-.018e8a		08		php		                PHP
-.018e8b		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e8d		a9 af		lda #$af		LDA #`ECP_DCR
-.018e8f		48		pha		                PHA
-.018e90		ab		plb		                PLB
-.018e91		28		plp		                PLP
-.018e92		68		pla		                PLA             ; end setdbr macro
-.018e93		a9 08		lda #$08	                  LDA #$8
-.018e95		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
-.018e98		2b		pld		                  PLD
-.018e99		28		plp		                  PLP
-.018e9a		6b		rtl		                  RTL
-.018e9b						IECP_SET_ECPMode_LINE_HIGH
-.018e9b		08		php		                  PHP
-.018e9c		0b		phd		                  PHD
-.018e9d		e2 20		sep #$20	                SEP #$20        ; set A short
-.018e9f		48		pha		                PHA             ; begin setdbr macro
-.018ea0		08		php		                PHP
-.018ea1		e2 20		sep #$20	                SEP #$20        ; set A short
-.018ea3		a9 af		lda #$af		LDA #`ECP_DCR
-.018ea5		48		pha		                PHA
-.018ea6		ab		plb		                PLB
-.018ea7		28		plp		                PLP
-.018ea8		68		pla		                PLA             ; end setdbr macro
-.018ea9		a9 08		lda #$08	                  LDA #$8
-.018eab		1c 7a 13	trb $af137a	                  TRB ECP_DCR
-.018eae		2b		pld		                  PLD
-.018eaf		28		plp		                  PLP
-.018eb0		6b		rtl		                  RTL
-.018eb1						IECP_ACTIVE_INTERRUPT
-.018eb1		08		php		                  PHP
-.018eb2		0b		phd		                  PHD
-.018eb3		e2 20		sep #$20	                SEP #$20        ; set A short
-.018eb5		48		pha		                PHA             ; begin setdbr macro
-.018eb6		08		php		                PHP
-.018eb7		e2 20		sep #$20	                SEP #$20        ; set A short
-.018eb9		a9 af		lda #$af		LDA #`ECP_DCR
-.018ebb		48		pha		                PHA
-.018ebc		ab		plb		                PLB
-.018ebd		28		plp		                PLP
-.018ebe		68		pla		                PLA             ; end setdbr macro
-.018ebf		a9 10		lda #$10	                  LDA #$10
-.018ec1		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
-.018ec4		2b		pld		                  PLD
-.018ec5		28		plp		                  PLP
-.018ec6		6b		rtl		                  RTL
-.018ec7						IECP_DEACTIVE_INTERRUPT
-.018ec7		08		php		                  PHP
-.018ec8		0b		phd		                  PHD
-.018ec9		e2 20		sep #$20	                SEP #$20        ; set A short
-.018ecb		48		pha		                PHA             ; begin setdbr macro
-.018ecc		08		php		                PHP
-.018ecd		e2 20		sep #$20	                SEP #$20        ; set A short
-.018ecf		a9 af		lda #$af		LDA #`ECP_DCR
-.018ed1		48		pha		                PHA
-.018ed2		ab		plb		                PLB
-.018ed3		28		plp		                PLP
-.018ed4		68		pla		                PLA             ; end setdbr macro
-.018ed5		a9 10		lda #$10	                  LDA #$10
-.018ed7		1c 7a 13	trb $af137a	                  TRB ECP_DCR
-.018eda		2b		pld		                  PLD
-.018edb		28		plp		                  PLP
-.018edc		6b		rtl		                  RTL
-.018edd						IECP_SET_DATA_IN
-.018edd		08		php		                  PHP
-.018ede		0b		phd		                  PHD
-.018edf		e2 20		sep #$20	                SEP #$20        ; set A short
-.018ee1		48		pha		                PHA             ; begin setdbr macro
-.018ee2		08		php		                PHP
-.018ee3		e2 20		sep #$20	                SEP #$20        ; set A short
-.018ee5		a9 af		lda #$af		LDA #`ECP_DCR
-.018ee7		48		pha		                PHA
-.018ee8		ab		plb		                PLB
-.018ee9		28		plp		                PLP
-.018eea		68		pla		                PLA             ; end setdbr macro
-.018eeb		a9 20		lda #$20	                  LDA #$20
-.018eed		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
-.018ef0		2b		pld		                  PLD
-.018ef1		28		plp		                  PLP
-.018ef2		6b		rtl		                  RTL
-.018ef3						IECP_SET_DATA_OUT
-.018ef3		08		php		                  PHP
-.018ef4		0b		phd		                  PHD
-.018ef5		e2 20		sep #$20	                SEP #$20        ; set A short
-.018ef7		48		pha		                PHA             ; begin setdbr macro
-.018ef8		08		php		                PHP
-.018ef9		e2 20		sep #$20	                SEP #$20        ; set A short
-.018efb		a9 af		lda #$af		LDA #`ECP_DCR
-.018efd		48		pha		                PHA
-.018efe		ab		plb		                PLB
-.018eff		28		plp		                PLP
-.018f00		68		pla		                PLA             ; end setdbr macro
-.018f01		a9 20		lda #$20	                  LDA #$20
-.018f03		1c 7a 13	trb $af137a	                  TRB ECP_DCR
-.018f06		2b		pld		                  PLD
-.018f07		28		plp		                  PLP
-.018f08		6b		rtl		                  RTL
-.018f09						IECP_SET_LPT_TO_ECP_MODE
-.018f09		08		php		                  PHP
-.018f0a		0b		phd		                  PHD
-.018f0b		c2 30		rep #$30	                REP #$30        ; set A&X long
-.018f0d		48		pha		                  PHA
-.018f0e		e2 20		sep #$20	                SEP #$20        ; set A short
-.018f10		a5 3a		lda $3a		                  LDA LPT_SET_ECP_MODE_CMD;
-.018f12		48		pha		                PHA             ; begin setdbr macro
-.018f13		08		php		                PHP
-.018f14		e2 20		sep #$20	                SEP #$20        ; set A short
-.018f16		a9 00		lda #$00		LDA #`LPT_SET_ECP_MODE_ADRESS
-.018f18		48		pha		                PHA
-.018f19		ab		plb		                PLB
-.018f1a		28		plp		                PLP
-.018f1b		68		pla		                PLA             ; end setdbr macro
-.018f1c		a9 00		lda #$00	                  LDA #0 ; mode 0 used to start the negociation
-.018f1e		22 46 8f 01	jsl $018f46	                  JSL IECP_SET_ECP_MODE
-.018f22		c2 30		rep #$30	                REP #$30        ; set A&X long
-.018f24		68		pla		                  PLA
-.018f25		2b		pld		                  PLD
-.018f26		28		plp		                  PLP
-.018f27		6b		rtl		                  RTL
-.018f28		08		php		IECP_NEGOCIATE    PHP
-.018f29		0b		phd		                  PHD
-.018f2a		c2 30		rep #$30	                REP #$30        ; set A&X long
-.018f2c		da		phx		                  PHX
-.018f2d		48		pha		                  PHA
-.018f2e		e2 20		sep #$20	                SEP #$20        ; set A short
-.018f30		a9 10		lda #$10	                  LDA #$10          ; Request ECP Mode
-.018f32		48		pha		                PHA             ; begin setdbr macro
-.018f33		08		php		                PHP
-.018f34		e2 20		sep #$20	                SEP #$20        ; set A short
-.018f36		a9 af		lda #$af		LDA #`ECP_DATA
-.018f38		48		pha		                PHA
-.018f39		ab		plb		                PLB
-.018f3a		28		plp		                PLP
-.018f3b		68		pla		                PLA             ; end setdbr macro
-.018f3c		8d 78 13	sta $af1378	                  STA ECP_DATA
-.018f3f		c2 30		rep #$30	                REP #$30        ; set A&X long
-.018f41		68		pla		                  PLA
-.018f42		fa		plx		                  PLX
-.018f43		2b		pld		                  PLD
-.018f44		28		plp		                  PLP
-.018f45		6b		rtl		                  RTL
-.018f46		08		php		IECP_SET_ECP_MODE PHP
-.018f47		0b		phd		                  PHD
-.018f48		c2 30		rep #$30	                REP #$30        ; set A&X long
-.018f4a		da		phx		                  PHX
-.018f4b		e2 30		sep #$30	                SEP #$30        ; set A&X short
-.018f4d		29 07		and #$07	                  AND #$7           ; keep only the forst 3 bits of the mode value
-.018f4f		0a		asl a		                  ASL               ; move the msb on bit position 5
-.018f50		0a		asl a		                  ASL
-.018f51		0a		asl a		                  ASL
-.018f52		0a		asl a		                  ASL
-.018f53		0a		asl a		                  ASL
-.018f54		48		pha		                PHA             ; begin setdbr macro
-.018f55		08		php		                PHP
-.018f56		e2 20		sep #$20	                SEP #$20        ; set A short
-.018f58		a9 01		lda #$01		LDA #`LPT_Temp_data
-.018f5a		48		pha		                PHA
-.018f5b		ab		plb		                PLB
-.018f5c		28		plp		                PLP
-.018f5d		68		pla		                PLA             ; end setdbr macro
-.018f5e		8d 00 8e	sta $018e00	                  STA LPT_Temp_data     ; save ther mode value
-.018f61		48		pha		                PHA             ; begin setdbr macro
-.018f62		08		php		                PHP
-.018f63		e2 20		sep #$20	                SEP #$20        ; set A short
-.018f65		a9 af		lda #$af		LDA #`ECP_ECR
-.018f67		48		pha		                PHA
-.018f68		ab		plb		                PLB
-.018f69		28		plp		                PLP
-.018f6a		68		pla		                PLA             ; end setdbr macro
-.018f6b		ad 7a 17	lda $af177a	                  LDA ECP_ECR
-.018f6e		29 1f		and #$1f	                  AND #$1F
-.018f70		48		pha		                PHA             ; begin setdbr macro
-.018f71		08		php		                PHP
-.018f72		e2 20		sep #$20	                SEP #$20        ; set A short
-.018f74		a9 01		lda #$01		LDA #`LPT_Temp_data
-.018f76		48		pha		                PHA
-.018f77		ab		plb		                PLB
-.018f78		28		plp		                PLP
-.018f79		68		pla		                PLA             ; end setdbr macro
-.018f7a		0d 00 8e	ora $018e00	                  ORA LPT_Temp_data
-.018f7d		8f 7a 17 af	sta $af177a	                  STA ECP_ECR       ; write the new value back
-.018f81		c2 30		rep #$30	                REP #$30        ; set A&X long
-.018f83		fa		plx		                  PLX
-.018f84		2b		pld		                  PLD
-.018f85		28		plp		                  PLP
-.018f86		6b		rtl		                  RTL
+.019200						LPT_DATA
+>019200		00				LPT_Temp_data       .text $0
+.019201						IECP_SET_HostClk_LINE_LOW
+.019201		08		php		                  PHP
+.019202		0b		phd		                  PHD
+.019203		e2 20		sep #$20	                SEP #$20        ; set A short
+.019205		48		pha		                PHA             ; begin setdbr macro
+.019206		08		php		                PHP
+.019207		e2 20		sep #$20	                SEP #$20        ; set A short
+.019209		a9 af		lda #$af		LDA #`ECP_DCR
+.01920b		48		pha		                PHA
+.01920c		ab		plb		                PLB
+.01920d		28		plp		                PLP
+.01920e		68		pla		                PLA             ; end setdbr macro
+.01920f		a9 01		lda #$01	                  LDA #$1
+.019211		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
+.019214		2b		pld		                  PLD
+.019215		28		plp		                  PLP
+.019216		6b		rtl		                  RTL
+.019217						IECP_SET_HostClk_LINE_HIGH
+.019217		08		php		                  PHP
+.019218		0b		phd		                  PHD
+.019219		e2 20		sep #$20	                SEP #$20        ; set A short
+.01921b		48		pha		                PHA             ; begin setdbr macro
+.01921c		08		php		                PHP
+.01921d		e2 20		sep #$20	                SEP #$20        ; set A short
+.01921f		a9 af		lda #$af		LDA #`ECP_DCR
+.019221		48		pha		                PHA
+.019222		ab		plb		                PLB
+.019223		28		plp		                PLP
+.019224		68		pla		                PLA             ; end setdbr macro
+.019225		a9 01		lda #$01	                  LDA #$1
+.019227		1c 7a 13	trb $af137a	                  TRB ECP_DCR
+.01922a		2b		pld		                  PLD
+.01922b		28		plp		                  PLP
+.01922c		6b		rtl		                  RTL
+.01922d						IECP_SET_HostAck_LINE_LOW
+.01922d		08		php		                  PHP
+.01922e		0b		phd		                  PHD
+.01922f		e2 20		sep #$20	                SEP #$20        ; set A short
+.019231		48		pha		                PHA             ; begin setdbr macro
+.019232		08		php		                PHP
+.019233		e2 20		sep #$20	                SEP #$20        ; set A short
+.019235		a9 af		lda #$af		LDA #`ECP_DCR
+.019237		48		pha		                PHA
+.019238		ab		plb		                PLB
+.019239		28		plp		                PLP
+.01923a		68		pla		                PLA             ; end setdbr macro
+.01923b		a9 02		lda #$02	                  LDA #$2
+.01923d		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
+.019240		2b		pld		                  PLD
+.019241		28		plp		                  PLP
+.019242		6b		rtl		                  RTL
+.019243						IECP_SET_HostAck_LINE_HIGH
+.019243		08		php		                  PHP
+.019244		0b		phd		                  PHD
+.019245		e2 20		sep #$20	                SEP #$20        ; set A short
+.019247		48		pha		                PHA             ; begin setdbr macro
+.019248		08		php		                PHP
+.019249		e2 20		sep #$20	                SEP #$20        ; set A short
+.01924b		a9 af		lda #$af		LDA #`ECP_DCR
+.01924d		48		pha		                PHA
+.01924e		ab		plb		                PLB
+.01924f		28		plp		                PLP
+.019250		68		pla		                PLA             ; end setdbr macro
+.019251		a9 02		lda #$02	                  LDA #$2
+.019253		1c 7a 13	trb $af137a	                  TRB ECP_DCR
+.019256		2b		pld		                  PLD
+.019257		28		plp		                  PLP
+.019258		6b		rtl		                  RTL
+.019259						IECP_SET_nReverseRequest_LINE_HIGH
+.019259		08		php		                  PHP
+.01925a		0b		phd		                  PHD
+.01925b		e2 20		sep #$20	                SEP #$20        ; set A short
+.01925d		48		pha		                PHA             ; begin setdbr macro
+.01925e		08		php		                PHP
+.01925f		e2 20		sep #$20	                SEP #$20        ; set A short
+.019261		a9 af		lda #$af		LDA #`ECP_DCR
+.019263		48		pha		                PHA
+.019264		ab		plb		                PLB
+.019265		28		plp		                PLP
+.019266		68		pla		                PLA             ; end setdbr macro
+.019267		a9 04		lda #$04	                  LDA #$4
+.019269		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
+.01926c		2b		pld		                  PLD
+.01926d		28		plp		                  PLP
+.01926e		6b		rtl		                  RTL
+.01926f						IECP_SET_nReverseRequest_LINE_LOW
+.01926f		08		php		                  PHP
+.019270		0b		phd		                  PHD
+.019271		e2 20		sep #$20	                SEP #$20        ; set A short
+.019273		48		pha		                PHA             ; begin setdbr macro
+.019274		08		php		                PHP
+.019275		e2 20		sep #$20	                SEP #$20        ; set A short
+.019277		a9 af		lda #$af		LDA #`ECP_DCR
+.019279		48		pha		                PHA
+.01927a		ab		plb		                PLB
+.01927b		28		plp		                PLP
+.01927c		68		pla		                PLA             ; end setdbr macro
+.01927d		a9 04		lda #$04	                  LDA #$4
+.01927f		1c 7a 13	trb $af137a	                  TRB ECP_DCR
+.019282		2b		pld		                  PLD
+.019283		28		plp		                  PLP
+.019284		6b		rtl		                  RTL
+.019285						IECP_SET_ECPMode_LINE_LOW
+.019285		08		php		                  PHP
+.019286		0b		phd		                  PHD
+.019287		e2 20		sep #$20	                SEP #$20        ; set A short
+.019289		48		pha		                PHA             ; begin setdbr macro
+.01928a		08		php		                PHP
+.01928b		e2 20		sep #$20	                SEP #$20        ; set A short
+.01928d		a9 af		lda #$af		LDA #`ECP_DCR
+.01928f		48		pha		                PHA
+.019290		ab		plb		                PLB
+.019291		28		plp		                PLP
+.019292		68		pla		                PLA             ; end setdbr macro
+.019293		a9 08		lda #$08	                  LDA #$8
+.019295		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
+.019298		2b		pld		                  PLD
+.019299		28		plp		                  PLP
+.01929a		6b		rtl		                  RTL
+.01929b						IECP_SET_ECPMode_LINE_HIGH
+.01929b		08		php		                  PHP
+.01929c		0b		phd		                  PHD
+.01929d		e2 20		sep #$20	                SEP #$20        ; set A short
+.01929f		48		pha		                PHA             ; begin setdbr macro
+.0192a0		08		php		                PHP
+.0192a1		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192a3		a9 af		lda #$af		LDA #`ECP_DCR
+.0192a5		48		pha		                PHA
+.0192a6		ab		plb		                PLB
+.0192a7		28		plp		                PLP
+.0192a8		68		pla		                PLA             ; end setdbr macro
+.0192a9		a9 08		lda #$08	                  LDA #$8
+.0192ab		1c 7a 13	trb $af137a	                  TRB ECP_DCR
+.0192ae		2b		pld		                  PLD
+.0192af		28		plp		                  PLP
+.0192b0		6b		rtl		                  RTL
+.0192b1						IECP_ACTIVE_INTERRUPT
+.0192b1		08		php		                  PHP
+.0192b2		0b		phd		                  PHD
+.0192b3		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192b5		48		pha		                PHA             ; begin setdbr macro
+.0192b6		08		php		                PHP
+.0192b7		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192b9		a9 af		lda #$af		LDA #`ECP_DCR
+.0192bb		48		pha		                PHA
+.0192bc		ab		plb		                PLB
+.0192bd		28		plp		                PLP
+.0192be		68		pla		                PLA             ; end setdbr macro
+.0192bf		a9 10		lda #$10	                  LDA #$10
+.0192c1		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
+.0192c4		2b		pld		                  PLD
+.0192c5		28		plp		                  PLP
+.0192c6		6b		rtl		                  RTL
+.0192c7						IECP_DEACTIVE_INTERRUPT
+.0192c7		08		php		                  PHP
+.0192c8		0b		phd		                  PHD
+.0192c9		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192cb		48		pha		                PHA             ; begin setdbr macro
+.0192cc		08		php		                PHP
+.0192cd		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192cf		a9 af		lda #$af		LDA #`ECP_DCR
+.0192d1		48		pha		                PHA
+.0192d2		ab		plb		                PLB
+.0192d3		28		plp		                PLP
+.0192d4		68		pla		                PLA             ; end setdbr macro
+.0192d5		a9 10		lda #$10	                  LDA #$10
+.0192d7		1c 7a 13	trb $af137a	                  TRB ECP_DCR
+.0192da		2b		pld		                  PLD
+.0192db		28		plp		                  PLP
+.0192dc		6b		rtl		                  RTL
+.0192dd						IECP_SET_DATA_IN
+.0192dd		08		php		                  PHP
+.0192de		0b		phd		                  PHD
+.0192df		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192e1		48		pha		                PHA             ; begin setdbr macro
+.0192e2		08		php		                PHP
+.0192e3		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192e5		a9 af		lda #$af		LDA #`ECP_DCR
+.0192e7		48		pha		                PHA
+.0192e8		ab		plb		                PLB
+.0192e9		28		plp		                PLP
+.0192ea		68		pla		                PLA             ; end setdbr macro
+.0192eb		a9 20		lda #$20	                  LDA #$20
+.0192ed		0c 7a 13	tsb $af137a	                  TSB ECP_DCR
+.0192f0		2b		pld		                  PLD
+.0192f1		28		plp		                  PLP
+.0192f2		6b		rtl		                  RTL
+.0192f3						IECP_SET_DATA_OUT
+.0192f3		08		php		                  PHP
+.0192f4		0b		phd		                  PHD
+.0192f5		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192f7		48		pha		                PHA             ; begin setdbr macro
+.0192f8		08		php		                PHP
+.0192f9		e2 20		sep #$20	                SEP #$20        ; set A short
+.0192fb		a9 af		lda #$af		LDA #`ECP_DCR
+.0192fd		48		pha		                PHA
+.0192fe		ab		plb		                PLB
+.0192ff		28		plp		                PLP
+.019300		68		pla		                PLA             ; end setdbr macro
+.019301		a9 20		lda #$20	                  LDA #$20
+.019303		1c 7a 13	trb $af137a	                  TRB ECP_DCR
+.019306		2b		pld		                  PLD
+.019307		28		plp		                  PLP
+.019308		6b		rtl		                  RTL
+.019309						IECP_SET_LPT_TO_ECP_MODE
+.019309		08		php		                  PHP
+.01930a		0b		phd		                  PHD
+.01930b		c2 30		rep #$30	                REP #$30        ; set A&X long
+.01930d		48		pha		                  PHA
+.01930e		e2 20		sep #$20	                SEP #$20        ; set A short
+.019310		a5 3a		lda $3a		                  LDA LPT_SET_ECP_MODE_CMD;
+.019312		48		pha		                PHA             ; begin setdbr macro
+.019313		08		php		                PHP
+.019314		e2 20		sep #$20	                SEP #$20        ; set A short
+.019316		a9 00		lda #$00		LDA #`LPT_SET_ECP_MODE_ADRESS
+.019318		48		pha		                PHA
+.019319		ab		plb		                PLB
+.01931a		28		plp		                PLP
+.01931b		68		pla		                PLA             ; end setdbr macro
+.01931c		a9 00		lda #$00	                  LDA #0 ; mode 0 used to start the negociation
+.01931e		22 46 93 01	jsl $019346	                  JSL IECP_SET_ECP_MODE
+.019322		c2 30		rep #$30	                REP #$30        ; set A&X long
+.019324		68		pla		                  PLA
+.019325		2b		pld		                  PLD
+.019326		28		plp		                  PLP
+.019327		6b		rtl		                  RTL
+.019328		08		php		IECP_NEGOCIATE    PHP
+.019329		0b		phd		                  PHD
+.01932a		c2 30		rep #$30	                REP #$30        ; set A&X long
+.01932c		da		phx		                  PHX
+.01932d		48		pha		                  PHA
+.01932e		e2 20		sep #$20	                SEP #$20        ; set A short
+.019330		a9 10		lda #$10	                  LDA #$10          ; Request ECP Mode
+.019332		48		pha		                PHA             ; begin setdbr macro
+.019333		08		php		                PHP
+.019334		e2 20		sep #$20	                SEP #$20        ; set A short
+.019336		a9 af		lda #$af		LDA #`ECP_DATA
+.019338		48		pha		                PHA
+.019339		ab		plb		                PLB
+.01933a		28		plp		                PLP
+.01933b		68		pla		                PLA             ; end setdbr macro
+.01933c		8d 78 13	sta $af1378	                  STA ECP_DATA
+.01933f		c2 30		rep #$30	                REP #$30        ; set A&X long
+.019341		68		pla		                  PLA
+.019342		fa		plx		                  PLX
+.019343		2b		pld		                  PLD
+.019344		28		plp		                  PLP
+.019345		6b		rtl		                  RTL
+.019346		08		php		IECP_SET_ECP_MODE PHP
+.019347		0b		phd		                  PHD
+.019348		c2 30		rep #$30	                REP #$30        ; set A&X long
+.01934a		da		phx		                  PHX
+.01934b		e2 30		sep #$30	                SEP #$30        ; set A&X short
+.01934d		29 07		and #$07	                  AND #$7           ; keep only the forst 3 bits of the mode value
+.01934f		0a		asl a		                  ASL               ; move the msb on bit position 5
+.019350		0a		asl a		                  ASL
+.019351		0a		asl a		                  ASL
+.019352		0a		asl a		                  ASL
+.019353		0a		asl a		                  ASL
+.019354		48		pha		                PHA             ; begin setdbr macro
+.019355		08		php		                PHP
+.019356		e2 20		sep #$20	                SEP #$20        ; set A short
+.019358		a9 01		lda #$01		LDA #`LPT_Temp_data
+.01935a		48		pha		                PHA
+.01935b		ab		plb		                PLB
+.01935c		28		plp		                PLP
+.01935d		68		pla		                PLA             ; end setdbr macro
+.01935e		8d 00 92	sta $019200	                  STA LPT_Temp_data     ; save ther mode value
+.019361		48		pha		                PHA             ; begin setdbr macro
+.019362		08		php		                PHP
+.019363		e2 20		sep #$20	                SEP #$20        ; set A short
+.019365		a9 af		lda #$af		LDA #`ECP_ECR
+.019367		48		pha		                PHA
+.019368		ab		plb		                PLB
+.019369		28		plp		                PLP
+.01936a		68		pla		                PLA             ; end setdbr macro
+.01936b		ad 7a 17	lda $af177a	                  LDA ECP_ECR
+.01936e		29 1f		and #$1f	                  AND #$1F
+.019370		48		pha		                PHA             ; begin setdbr macro
+.019371		08		php		                PHP
+.019372		e2 20		sep #$20	                SEP #$20        ; set A short
+.019374		a9 01		lda #$01		LDA #`LPT_Temp_data
+.019376		48		pha		                PHA
+.019377		ab		plb		                PLB
+.019378		28		plp		                PLP
+.019379		68		pla		                PLA             ; end setdbr macro
+.01937a		0d 00 92	ora $019200	                  ORA LPT_Temp_data
+.01937d		8f 7a 17 af	sta $af177a	                  STA ECP_ECR       ; write the new value back
+.019381		c2 30		rep #$30	                REP #$30        ; set A&X long
+.019383		fa		plx		                  PLX
+.019384		2b		pld		                  PLD
+.019385		28		plp		                  PLP
+.019386		6b		rtl		                  RTL
 
 ;******  Return to file: kernel.asm
 
@@ -11940,8 +12244,8 @@
 .1904e4		22 93 00 16	jsl $160093	                JSL UART_PUTC
 .1904e8		a9 0d 00	lda #$000d	                LDA #$D
 .1904eb		22 93 00 16	jsl $160093	                JSL UART_PUTC
-.1904ef		22 6f 00 01	jsl $01006f	                JSL FAT32_init  ; initialise the FAT so get the MBR / boot sector / first Root directory cluster
-.1904f3		22 b4 00 01	jsl $0100b4	                JSL FAT32_test
+.1904ef		22 8c 00 01	jsl $01008c	                JSL FAT32_init  ; initialise the FAT so get the MBR / boot sector / first Root directory cluster
+.1904f3		22 d5 00 01	jsl $0100d5	                JSL FAT32_test
 .1904f7						ppt_Main_loop
 .1904f7		e2 20		sep #$20	                SEP #$20        ; set A short
 .1904f9		48		pha		                PHA             ; begin setdbr macro
@@ -12081,42 +12385,42 @@
 .1905f7		8d 7a 13	sta $af137a	                STA $AF137A
 .1905fa		a2 d0 07	ldx #$07d0	                LDX #2000
 .1905fd		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.190601		22 09 8f 01	jsl $018f09	                JSL IECP_SET_LPT_TO_ECP_MODE
-.190605		22 c7 8e 01	jsl $018ec7	                JSL IECP_DEACTIVE_INTERRUPT
-.190609		22 f3 8e 01	jsl $018ef3	                JSL IECP_SET_DATA_OUT
+.190601		22 09 93 01	jsl $019309	                JSL IECP_SET_LPT_TO_ECP_MODE
+.190605		22 c7 92 01	jsl $0192c7	                JSL IECP_DEACTIVE_INTERRUPT
+.190609		22 f3 92 01	jsl $0192f3	                JSL IECP_SET_DATA_OUT
 .19060d						ECP_Main_loop
 .19060d		e2 20		sep #$20	                SEP #$20        ; set A short
 .19060f		a2 d0 07	ldx #$07d0	                LDX #2000
 .190612		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.190616		22 01 8e 01	jsl $018e01	                JSL IECP_SET_HostClk_LINE_LOW
+.190616		22 01 92 01	jsl $019201	                JSL IECP_SET_HostClk_LINE_LOW
 .19061a		e2 20		sep #$20	                SEP #$20        ; set A short
 .19061c		a2 d0 07	ldx #$07d0	                LDX #2000
 .19061f		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.190623		22 17 8e 01	jsl $018e17	                JSL IECP_SET_HostClk_LINE_HIGH
+.190623		22 17 92 01	jsl $019217	                JSL IECP_SET_HostClk_LINE_HIGH
 .190627		e2 20		sep #$20	                SEP #$20        ; set A short
 .190629		a2 d0 07	ldx #$07d0	                LDX #2000
 .19062c		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.190630		22 2d 8e 01	jsl $018e2d	                JSL IECP_SET_HostAck_LINE_LOW
+.190630		22 2d 92 01	jsl $01922d	                JSL IECP_SET_HostAck_LINE_LOW
 .190634		e2 20		sep #$20	                SEP #$20        ; set A short
 .190636		a2 d0 07	ldx #$07d0	                LDX #2000
 .190639		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.19063d		22 43 8e 01	jsl $018e43	                JSL IECP_SET_HostAck_LINE_HIGH
+.19063d		22 43 92 01	jsl $019243	                JSL IECP_SET_HostAck_LINE_HIGH
 .190641		e2 20		sep #$20	                SEP #$20        ; set A short
 .190643		a2 d0 07	ldx #$07d0	                LDX #2000
 .190646		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.19064a		22 6f 8e 01	jsl $018e6f	                JSL IECP_SET_nReverseRequest_LINE_LOW
+.19064a		22 6f 92 01	jsl $01926f	                JSL IECP_SET_nReverseRequest_LINE_LOW
 .19064e		e2 20		sep #$20	                SEP #$20        ; set A short
 .190650		a2 d0 07	ldx #$07d0	                LDX #2000
 .190653		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.190657		22 59 8e 01	jsl $018e59	                JSL IECP_SET_nReverseRequest_LINE_HIGH
+.190657		22 59 92 01	jsl $019259	                JSL IECP_SET_nReverseRequest_LINE_HIGH
 .19065b		e2 20		sep #$20	                SEP #$20        ; set A short
 .19065d		a2 d0 07	ldx #$07d0	                LDX #2000
 .190660		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.190664		22 85 8e 01	jsl $018e85	                JSL IECP_SET_ECPMode_LINE_LOW
+.190664		22 85 92 01	jsl $019285	                JSL IECP_SET_ECPMode_LINE_LOW
 .190668		e2 20		sep #$20	                SEP #$20        ; set A short
 .19066a		a2 d0 07	ldx #$07d0	                LDX #2000
 .19066d		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
-.190671		22 9b 8e 01	jsl $018e9b	                JSL IECP_SET_ECPMode_LINE_HIGH
+.190671		22 9b 92 01	jsl $01929b	                JSL IECP_SET_ECPMode_LINE_HIGH
 .190675		e2 20		sep #$20	                SEP #$20        ; set A short
 .190677		48		pha		                PHA             ; begin setdbr macro
 .190678		08		php		                PHP
@@ -12146,9 +12450,9 @@
 .1906a2		a2 d0 07	ldx #$07d0	                LDX #2000
 .1906a5		22 43 a0 01	jsl $01a043	                JSL ILOOP_MS
 .1906a9		a9 03		lda #$03	                LDA #$3 ; ECP mode
-.1906ab		22 46 8f 01	jsl $018f46	                JSL IECP_SET_ECP_MODE
-.1906af		22 c7 8e 01	jsl $018ec7	                JSL IECP_DEACTIVE_INTERRUPT
-.1906b3		22 f3 8e 01	jsl $018ef3	                JSL IECP_SET_DATA_OUT
+.1906ab		22 46 93 01	jsl $019346	                JSL IECP_SET_ECP_MODE
+.1906af		22 c7 92 01	jsl $0192c7	                JSL IECP_DEACTIVE_INTERRUPT
+.1906b3		22 f3 92 01	jsl $0192f3	                JSL IECP_SET_DATA_OUT
 .1906b7						ECP_Main_loop_2
 .1906b7		e2 20		sep #$20	                SEP #$20        ; set A short
 .1906b9		a2 40 9c	ldx #$9c40	                LDX #40000
