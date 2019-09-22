@@ -145,7 +145,9 @@ greet           setdbr `greet_msg       ;Set data bank to ROM
                 ;JSL UART_PUTS
                 ;---------------------------------------------------------------
                 ; FAT
+                JSL FAT32_init  ; initialise the FAT so get the MBR / boot sector / first Root directory cluster
                 JSL FAT32_test
+
                 ;---------------------------------------------------------------
                 ; Joystic test code START
 
